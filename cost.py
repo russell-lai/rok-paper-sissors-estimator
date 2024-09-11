@@ -41,7 +41,6 @@ class Cost:
             cost_ext_2 = [sqrt(tdim),0] # ext_expansion_2 = cost_ext_2
             cost_wit_inf = [1,0]
             cost_ext_inf = [1,0]
-            print(par)
             cost_comm = par.ring_param["Rq_size"] * ((tdim - 1) * (par.nout -  par.nbot) + (tdim * tdim - 1) * par.nbot) * par.rep # new prover_comm is prover_comm + cost_comm
             cost_snd = 0
 
