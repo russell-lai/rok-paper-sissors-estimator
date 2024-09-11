@@ -55,7 +55,8 @@ class Cost:
             cost_ext_2 = [2 * sqrt(par.rep) * par.ring_param["theta_2"], 0] # ext_expansion_2 = cost_ext_2
             cost_wit_inf = [par.ring_param["gamma_inf"], 0]
             cost_ext_inf = [2 * par.ring_param["theta_inf"], 0]
-            cost_comm = par.ring_param["Rq_size"] * repout * par.rep # new prover_comm is prover_comm + cost_comm
+            # cost_comm = par.ring_param["Rq_size"] * repout * par.rep # new prover_comm is prover_comm + cost_comm
+            cost_comm = 0 # new prover_comm is prover_comm + cost_comm
             cost_snd = par.rep / ( par.ring_param["C"]**repout ) 
 
         if op == "batch":
