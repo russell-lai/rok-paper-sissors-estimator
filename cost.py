@@ -76,7 +76,8 @@ class Cost:
                 ell = v_ell
                 base = v_base
             else:
-                base = 2 * par.beta_wit_inf + 1
+                base_multiplier = kwargs["base_multiplier"] if "base_multiplier" in kwargs else 2
+                base = base_multiplier * par.beta_wit_inf + 1
                 ell = ceil(log( par.ring_param["ring_exp_inf"] * par.wit_rdim * par.beta_wit_inf**2, base ))
             
 
