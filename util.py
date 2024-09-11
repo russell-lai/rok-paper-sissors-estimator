@@ -2,7 +2,7 @@
 # For this we can canoncialize radicals. (Otherwise, sqrt(x*y) and sqrt(x) * sqrt(y) are NOT equal, and such simplifications will not be made.)
 # See: https://doc.sagemath.org/html/en/reference/calculus/sage/symbolic/expression.html#sage.symbolic.expression.Expression.canonicalize_radical
 
-from sage.all import log, Infinity, ceil, floor
+from sage.all import log, Infinity, ceil, floor, n
 
 def has_method(obj, method):
     return callable(getattr(obj, method, None))
@@ -35,7 +35,8 @@ def pretty_size(bits, units=UNITS_MAPPING):
     for factor, suffix in units:
         if bits >= factor:
             break
-    amount = int(bits / factor)
+    # amount = int(bits / factor)
+    amount = n(bits/factor, digits=4)
 
     if isinstance(suffix, tuple):
         singular, multiple = suffix
