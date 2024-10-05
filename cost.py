@@ -41,7 +41,7 @@ class Cost:
             cost_ext_2 = [sqrt(tdim),0] # ext_expansion_2 = cost_ext_2
             cost_wit_inf = [1,0]
             cost_ext_inf = [1,0]
-            cost_comm = par.ring_param["Rq_size"] * (tdim - 1) * par.nout * par.rep # new prover_comm is prover_comm + cost_comm
+            cost_comm = par.ring_param["Rq_size"] * ((tdim - 1) * (par.nout -  par.nbot) + (tdim * tdim - 1) * par.nbot) * par.rep # new prover_comm is prover_comm + cost_comm
             cost_snd = 0
 
         if op == "fold":
@@ -76,7 +76,8 @@ class Cost:
                 ell = v_ell
                 base = v_base
             else:
-                base = 2 * par.beta_wit_inf + 1
+                base_multiplier = kwargs["base_multiplier"] if "base_multiplier" in kwargs else 2
+                base = base_multiplier * par.beta_wit_inf + 1
                 ell = ceil(log( par.ring_param["ring_exp_inf"] * par.wit_rdim * par.beta_wit_inf**2, base ))
             
 
