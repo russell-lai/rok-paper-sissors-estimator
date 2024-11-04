@@ -99,10 +99,10 @@ def findMSISdelta(phi, n, log_beta_sis, log_q):
     return 2 ** log_delta
 
 # Find commitment module rank such that SIS is hard in canonical-2 norm
-def find_commit_module_rank(phi,log_beta_sis,log_q):
+def find_commit_module_rank(phi,log_beta_sis,log_q,rhf=1.0044):
     if log_beta_sis >= log_q:                  # Check if the norm is above q
         return 0
-    n = ceil(log_beta_sis**2 / (4 * phi * log_q * log(1.0044,2)))
+    n = ceil(log_beta_sis**2 / (4 * phi * log_q * log(rhf,2)))
     return n
 
 sym_sis_param = {
@@ -110,23 +110,23 @@ sym_sis_param = {
     "log_beta_sis" : log(v_beta_sis)
 }
 
-def gen_sis_param(sym_mode = False, ring_param = sym_ring_param, log_beta_sis = 60):
+def gen_sis_param(sym_mode = False, ring_param = sym_ring_param, log_beta_sis = 60,rhf=1.0044):
     if sym_mode:
         return sym_sis_param
     if log_beta_sis >= ring_param["log_q"]:                  # Check if the norm is above q
         return 0
-    n = ceil(log_beta_sis**2 / (4 * ring_param["phi"] * ring_param["log_q"] * log(1.0044,2)))
+    n = ceil(log_beta_sis**2 / (4 * ring_param["phi"] * ring_param["log_q"] * log(rhf,2)))
     return {
         "n" : n,
         "log_beta_sis" : log_beta_sis
     }
 
-def gen_sis_param_aggresive(sym_mode = False, ring_param = sym_ring_param, log_beta_sis = 60):
+def gen_sis_param_aggresive(sym_mode = False, ring_param = sym_ring_param, log_beta_sis = 60,rhf=1.0044):
     if sym_mode:
         return sym_sis_param
     if log_beta_sis >= ring_param["log_q"]:                  # Check if the norm is above q
         return 0
-    n = ceil((log_beta_sis - log(ring_param["phi"], 2))**2 / (4 * ring_param["phi"] * ring_param["log_q"] * log(1.0044,2)))
+    n = ceil((log_beta_sis - log(ring_param["phi"], 2))**2 / (4 * ring_param["phi"] * ring_param["log_q"] * log(rhf,2)))
     return {
         "n" : n,
         "log_beta_sis" : log_beta_sis
