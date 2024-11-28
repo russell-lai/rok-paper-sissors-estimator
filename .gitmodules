@@ -1,0 +1,3 @@
+[submodule "lattice_lib"]
+	path = lattice_lib
+	url = ../lattice_lib.git
