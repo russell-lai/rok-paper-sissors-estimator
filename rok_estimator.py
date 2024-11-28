@@ -1,6 +1,6 @@
 from dataclasses import *
 from typing import List
-from sage.all import euler_phi, Expression, var
+from sage.all import euler_phi, Expression, var, mod, ceil
 from lattice_lib import *
 
 @dataclass
