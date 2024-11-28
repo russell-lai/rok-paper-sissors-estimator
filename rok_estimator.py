@@ -1,18 +1,45 @@
 from dataclasses import *
 from typing import List
-from sage.all import euler_phi, Expression, var, mod, ceil
+from sage.all import euler_phi, Expression, var, mod, ceil, is_prime_power, sqrt, radical
 from lattice_lib import *
+from lattice_lib.util import *
 
 @dataclass
 class SubtractiveSet:
-    """Data class for subtractive sets."""
+    """
+    Data class for subtractive sets.
+    
+    Examples:
+    
+    sage: SubtractiveSet.gen_klno24_cyclotomic(9)
+    SubtractiveSet(cardinality=3, gamma_2=3, gamma_inf=6, theta_2=9/4*sqrt(2), theta_inf=6)
+    
+    sage: SubtractiveSet.gen_klno24_cyclotomic(60) 
+    SubtractiveSet(cardinality=12, gamma_2=1, gamma_inf=1024/pi^3, theta_2=15/2*sqrt(2), theta_inf=1024/pi^3)
+    """
     cardinality: int = 2    # cardinality of the subtractive set C
     gamma_2: float = 1      # forward expansion factor of C in canonical ell_2-norm
     gamma_inf: float = 1    # forward expansion factor of C in coefficient ell_inf-norm
     theta_2: float = 1      # inverse expansion factor of C in canonical ell_2-norm
     theta_inf: float = 1    # inverse expansion factor of C in coefficient ell_inf-norm
-
-# TODO: default subtractive sets
+    
+    def gen_klno24_cyclotomic(f: int):
+        """ 
+        Use the subtractive set constructions for cyclotomic fields reported in KLNO24. 
+        """
+        if mod(f,4) == 2:
+            raise Exception("Conductor f cannot be congruent to 2 modulo 4.")
+        if is_prime_power(f):
+            if f <= 4:
+                raise Exception("Conductor f <= 4 is not supported.")
+            phi = euler_phi(f)
+            p = radical(f)
+            return SubtractiveSet(cardinality = p, gamma_2 = p, gamma_inf = phi, theta_2 = f/(2*sqrt(2)), theta_inf = phi)
+        else:
+            phi = euler_phi(f)
+            fmax = max_prime_power_divisor(f) 
+            c_rad = (4/pi)**len(f.prime_divisors())
+            return SubtractiveSet(cardinality = f/fmax, gamma_2 = 1, gamma_inf = c_rad * phi, theta_2 = f/(4*sqrt(2)), theta_inf = c_rad * phi)
 
 @dataclass
 class RingParam:
