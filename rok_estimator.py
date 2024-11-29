@@ -86,10 +86,10 @@ class Cost:
     Data class for costs of reductions of knowledge.
     
     Example:
-    sage: Cost(beta_ext_2=1,beta_ext_inf=1,comm=0,snd=0)
+    sage: Cost(log_beta_ext_2=1,log_beta_ext_inf=1,comm=0,snd=0)
     """
-    beta_ext_2 : int = 1        # norm expansion factor for canonical ell_2-norm after extraction
-    beta_ext_inf : int = 1      # norm expansion factor for coefficient ell_inf-norm after extraction
+    log_beta_ext_2 : float = 1        # norm expansion factor for canonical ell_2-norm after extraction
+    log_beta_ext_inf : float = 1      # norm expansion factor for coefficient ell_inf-norm after extraction
     comm : int = 0              # communication cost
     snd : int = 0               # soundness cost
 
@@ -99,7 +99,7 @@ class Relation:
     Data class for relations.
     
     Example:
-    sage: Relation(ntop=1,nbot=1,nout=1,wdim=1,rep=1,log_beta_wit_2=1,log_beta_wit_inf=1,log_beta_ext_2=1,log_beta_ext_inf=1)
+    sage: Relation(ntop=1,nbot=1,nout=1,wdim=1,rep=1,log_beta_wit_2=1,log_beta_wit_inf=1)
     """
     ring_params: RingParam   # ring parameters
     ntop: int = 1                                   # module rank of commitment
@@ -141,13 +141,12 @@ class Relation:
             
         rel = deepcopy(self)
         rel.rep = self.rep * ell
-        rel.log_beta_ext_2      = log(sqrt(ell * self.rep * self.wdim * self.ring_params.fhat * self.ring_params.phi) * base / 2,2)
-        rel.log_beta_ext_inf    = log(floor(base / 2),2)
-        cost_beta_ext_2 = (base**ell-1)/(base-1)
-        cost_beta_ext_inf = (base**ell-1)/(base-1)
-        cost_comm = self.ring_params.size_Rq() * (ell-1) * self.nout * self.rep
-        cost_snd = 0
-        cost = Cost(beta_ext_2=cost_beta_ext_2,beta_ext_inf=cost_beta_ext_inf,comm=cost_comm,snd=cost_snd)
+        rel.log_beta_wit_2      = log(sqrt(ell * self.rep * self.wdim * self.ring_params.fhat * self.ring_params.phi) * base / 2,2)
+        rel.log_beta_wit_inf    = log(floor(base / 2),2)
+        log_beta_ext_2 = log((base**ell-1)/(base-1),2)
+        log_beta_ext_inf = log((base**ell-1)/(base-1),2)
+        comm = self.ring_params.size_Rq() * (ell-1) * self.nout * self.rep
+        cost = Cost(log_beta_ext_2=log_beta_ext_2,log_beta_ext_inf=log_beta_ext_inf,comm=comm)
         return rel, cost
     
     def pi_split(self,d: int):
@@ -160,11 +159,8 @@ class Relation:
         rel = deepcopy(self)
         rel.wdim = self.wdim / d
         rel.rep = self.rep * d
-        cost_beta_ext_2 = 1
-        cost_beta_ext_inf = 1
-        cost_comm = self.ring_params.size_Rq() * ((d - 1) * self.ntop + (d**2 - 1) * (self.nout - self.ntop)) * self.rep
-        cost_snd = 0
-        cost = Cost(beta_ext_2=cost_beta_ext_2,beta_ext_inf=cost_beta_ext_inf,comm=cost_comm,snd=cost_snd)
+        comm = self.ring_params.size_Rq() * ((d - 1) * self.ntop + (d**2 - 1) * (self.nout - self.ntop)) * self.rep
+        cost = Cost(comm=comm)
         return rel, cost
     
     def pi_fold(self,repout: int):
@@ -174,13 +170,12 @@ class Relation:
         rel = deepcopy(self)
         repin = self.rep
         rel.rep = repout
-        rel.log_beta_ext_2 = log(sqrt(repout) * repin * self.ring_params.C.gamma_2,2)
-        rel.log_beta_ext_inf = log(sqrt(repout) * repin * self.ring_params.C.gamma_inf,2)
-        cost_beta_ext_2 = 2 * sqrt(repin) * self.ring_params.C.theta_2
-        cost_beta_ext_inf = 2 * sqrt(repin) * self.ring_params.C.theta_inf
-        cost_comm = 0
-        cost_snd = repin / (self.ring_params.C.cardinality**repout)
-        cost = Cost(beta_ext_2=cost_beta_ext_2,beta_ext_inf=cost_beta_ext_inf,comm=cost_comm,snd=cost_snd)
+        rel.log_beta_wit_2 = log(sqrt(repout) * repin * self.ring_params.C.gamma_2,2) + self.log_beta_wit_2
+        rel.log_beta_wit_inf = log(sqrt(repout) * repin * self.ring_params.C.gamma_inf,2) + self.log_beta_wit_inf
+        log_beta_ext_2 = 2 * sqrt(repin) * self.ring_params.C.theta_2
+        log_beta_ext_inf = 2 * sqrt(repin) * self.ring_params.C.theta_inf
+        snd = repin / (self.ring_params.C.cardinality**repout)
+        cost = Cost(log_beta_ext_2=log_beta_ext_2,log_beta_ext_inf=log_beta_ext_inf,snd=snd)
         return rel, cost
     
     def pi_batch(self):
