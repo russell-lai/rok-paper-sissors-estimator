@@ -66,11 +66,11 @@ class RingParam:
     phi: int = field(init=False)                # degree
     log_betasis: int = 32                       # log of norm bound beta_sis for SIS problem
     log_q: int = 64                             # log of modulus q (assumed prime)
-    e: int | None = None                        # inertia degree of q, i.e. R_q splits into fields of cardinality q**e 
+    residue_deg: int | None = None                        # inertia degree of q, i.e. R_q splits into fields of cardinality q**e 
     C: InitVar[SubtractiveSet | None] = None    # subtractive set parameters
     ring_exp_inf: float = field(init=False)     # ring expansion factor in coefficient ell_inf-norm
-    nsis: int | None = None
-    secpar: int | None = 128
+    nsis: int | None = None                     # module rank of SIS instance
+    secpar: int | None = 128                    # target bit security
 
     def __post_init__(self, C):
         if mod(self.f,4) == 2:
@@ -81,21 +81,29 @@ class RingParam:
         self.ring_exp_inf = euler_phi(self.f)
         if self.C == None:
             self.C = SubtractiveSet.gen_klno24_cyclotomic(self.f)   # Use the subtractive set construction for cyclotomic fields reported in KLNO24
-        if self.e == None:
-            self.e = ceil(80/self.log_q)        # Aim for 80 bits of soundness for Schwartz-Zippel
+        if self.residue_deg == None:
+            self.residue_deg = ceil(80/self.log_q)        # Aim for 80 bits of soundness for Schwartz-Zippel
         if is_even(self.f):
             self.fhat = self.f/2
         else:
             self.fhat = self.f
-        for nsis in range(1, 500):
-            sis = estimator.SIS.Parameters(self.phi*nsis, 2**self.log_q, 2**self.log_betasis)
+        if self.nsis == None:    
+            for nsis in range(1, 500):
+                sis = estimator.SIS.Parameters(self.phi*nsis, 2**self.log_q, 2**self.log_betasis)
+                with HiddenPrints():
+                    costs = estimator.SIS.estimate(sis)
+                sec = min(cost["rop"] for cost in costs.values())
+                if sec >= 2**self.secpar:    
+                    self.nsis = nsis
+                    self.secpar = floor(log(sec,2))
+                    break
+        else:   
+            sis = estimator.SIS.Parameters(self.phi*self.nsis, 2**self.log_q, 2**self.log_betasis)
             with HiddenPrints():
                 costs = estimator.SIS.estimate(sis)
             sec = min(cost["rop"] for cost in costs.values())
-            if sec > 2**self.secpar:    
-                self.nsis = nsis
-                self.secpar = floor(log(sec,2))
-                break
+            if sec < 2**self.secpar:
+                raise Exception("Specified module rank for SIS is too small for the target security level.")
 
     def size_Rq(self):
         return self.phi * self.log_q
