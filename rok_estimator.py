@@ -58,6 +58,7 @@ class RingParam:
     e: int | None = None                        # inertia degree of q, i.e. R_q splits into fields of cardinality q**e 
     C: InitVar[SubtractiveSet | None] = None    # subtractive set parameters
     ring_exp_inf: float = field(init=False)     # ring expansion factor in coefficient ell_inf-norm
+    nsis: int = 1
     bit_security: int | None = None
 
     def __post_init__(self, C):
@@ -86,10 +87,12 @@ class Cost:
     Data class for costs of reductions of knowledge.
     
     Example:
-    sage: Cost(log_beta_ext_2=1,log_beta_ext_inf=1,comm=0,snd=0)
+    sage: Cost(log_beta_ext_2_exp=1,log_beta_ext_inf_exp=1,comm=0,snd=0)
     """
-    log_beta_ext_2 : float = 1        # norm expansion factor for canonical ell_2-norm after extraction
-    log_beta_ext_inf : float = 1      # norm expansion factor for coefficient ell_inf-norm after extraction
+    log_beta_ext_2_exp : float = 1        # norm expansion factor for canonical ell_2-norm after extraction
+    log_beta_ext_inf_exp : float = 1      # norm expansion factor for coefficient ell_inf-norm after extraction
+    log_beta_wit_2 : float | None = None  # set canonical ell_2-norm of extracted witness to this value
+    log_beta_wit_inf : float | None = None # set coefficient ell_inf-norm of extracted witness to this value
     comm : int = 0              # communication cost
     snd : int = 0               # soundness cost
 
@@ -101,15 +104,18 @@ class Relation:
     Example:
     sage: Relation(ntop=1,nbot=1,nout=1,wdim=1,rep=1,log_beta_wit_2=1,log_beta_wit_inf=1)
     """
-    ring_params: RingParam   # ring parameters
+    ring_params: RingParam = field(repr=False)      # ring parameters
+    nout: int = 1                                   # number of compressed relations, including both commitment and non-commitment relations
     ntop: int = 1                                   # module rank of commitment
     nbot: int = 1                                   # number of non-commitment relations  
-    nout: int = 1                                   # number of compressed relations, including both commitment and non-commitment relations
     wdim: int = 1                                   # dimension of each witness 
-    rep: int = 1                                   # bundle size of witnesses 
-    log_beta_wit_2: float = 1                       # log of canonical ell_2-norm bound of witness
-    log_beta_wit_inf: float = 1                     # log of coefficient ell_inf-norm bound of witness
+    rep: int = 1                                    # bundle size of witnesses 
+    log_beta_wit_2: float = 0                       # log of canonical ell_2-norm bound of witness
+    log_beta_wit_inf: float = 0                     # log of coefficient ell_inf-norm bound of witness
     
+    def show(self):
+        print(f'Relation: wdim = {self.wdim}, rep = {self.rep}, log_beta_wit_2 = {ceil(self.log_beta_wit_2)}, log_beta_wit_inf = {ceil(self.log_beta_wit_inf)}')
+            
     def pi_noop(self):
         """
         Returns the relation resulting from the pi_noop RoK and its costs. 
@@ -143,10 +149,12 @@ class Relation:
         rel.rep = self.rep * ell
         rel.log_beta_wit_2      = log(sqrt(ell * self.rep * self.wdim * self.ring_params.fhat * self.ring_params.phi) * base / 2,2)
         rel.log_beta_wit_inf    = log(floor(base / 2),2)
-        log_beta_ext_2 = log((base**ell-1)/(base-1),2)
-        log_beta_ext_inf = log((base**ell-1)/(base-1),2)
+        
+        log_beta_ext_2_exp = log((base**ell-1)/(base-1),2)
+        log_beta_ext_inf_exp = log((base**ell-1)/(base-1),2)
         comm = self.ring_params.size_Rq() * (ell-1) * self.nout * self.rep
-        cost = Cost(log_beta_ext_2=log_beta_ext_2,log_beta_ext_inf=log_beta_ext_inf,comm=comm)
+        cost = Cost(log_beta_ext_2_exp=log_beta_ext_2_exp,log_beta_ext_inf_exp=log_beta_ext_inf_exp,comm=comm)
+        
         return rel, cost
     
     def pi_split(self,d: int):
@@ -159,8 +167,10 @@ class Relation:
         rel = deepcopy(self)
         rel.wdim = self.wdim / d
         rel.rep = self.rep * d
+        
         comm = self.ring_params.size_Rq() * ((d - 1) * self.ntop + (d**2 - 1) * (self.nout - self.ntop)) * self.rep
         cost = Cost(comm=comm)
+        
         return rel, cost
     
     def pi_fold(self,repout: int):
@@ -172,23 +182,48 @@ class Relation:
         rel.rep = repout
         rel.log_beta_wit_2 = log(sqrt(repout) * repin * self.ring_params.C.gamma_2,2) + self.log_beta_wit_2
         rel.log_beta_wit_inf = log(sqrt(repout) * repin * self.ring_params.C.gamma_inf,2) + self.log_beta_wit_inf
-        log_beta_ext_2 = 2 * sqrt(repin) * self.ring_params.C.theta_2
-        log_beta_ext_inf = 2 * sqrt(repin) * self.ring_params.C.theta_inf
+        
+        log_beta_ext_2_exp = 2 * sqrt(repin) * self.ring_params.C.theta_2
+        log_beta_ext_inf_exp = 2 * sqrt(repin) * self.ring_params.C.theta_inf
         snd = repin / (self.ring_params.C.cardinality**repout)
-        cost = Cost(log_beta_ext_2=log_beta_ext_2,log_beta_ext_inf=log_beta_ext_inf,snd=snd)
+        cost = Cost(log_beta_ext_2_exp=log_beta_ext_2_exp,log_beta_ext_inf_exp=log_beta_ext_inf_exp,snd=snd)
+        
         return rel, cost
     
     def pi_batch(self):
         """
         Returns the relation resulting from the pi_batch RoK and its costs. 
         """
-        return deepcopy(self), Cost()
+        rel = deepcopy(self)
+        if self.nout > self.ntop: 
+            rel.nout = self.ntop + 1
+        snd = self.rep * self.nbot / (2**(self.ring_params.log_q * self.ring_params.e))
+        cost = Cost(snd=snd)
+        return rel, cost
+    
+        # TODO: Michal claims that sometimes it is not worth it running pi_batch. This cost table does not reflect this observation.
     
     def pi_norm(self):
         """
         Returns the relation resulting from the pi_norm RoK and its costs. 
         """
-        return deepcopy(self), Cost()
+        
+        base = 2 * 2**self.log_beta_wit_inf + 1
+        ell = ceil(log( self.ring_params.ring_exp_inf * self.wdim * 2**(self.log_beta_wit_inf * 2), base ))
+        
+        rel = deepcopy(self)
+        rel.nout = self.nout + 3
+        rel.nbot = self.nbot + 3
+        rel.rep = self.rep + ell
+        rel.log_beta_wit_2 = log(sqrt( 2**(self.log_beta_wit_2*2) +  ell * self.wdim * self.ring_params.fhat * 2**(self.log_beta_wit_inf*2) ),2) 
+        
+        # TODO: Add logic for resetting norm of extracted witness 
+        comm = self.ring_params.size_Rq() * (ell * (self.ring_params.nsis + self.nbot) + 3 * self.rep + 3 * ell) 
+        snd = 2 * self.wdim / (2**(self.ring_params.log_q * self.ring_params.e))
+        log_beta_ext_2 = self.log_beta_wit_2
+        log_beta_ext_inf = log(sqrt(self.ring_params.fhat * self.ring_params.phi * self.wdim * self.rep),2) + self.log_beta_wit_2
+        cost = Cost(comm=comm,snd=snd)
+        return rel, cost
     
     def pi_ip(self):
         """
@@ -232,8 +267,8 @@ class Relation:
 #         rel.rep = pi.f_rep(rel.rep)
 #         rel.log_beta_wit_2 = pi.f_log_beta_wit_2(rel.log_beta_wit_2)
 #         rel.log_beta_wit_inf = pi.f_log_beta_wit_inf(rel.log_beta_wit_inf)
-#         rel.log_beta_ext_2 = pi.f_log_beta_ext_2(rel.log_beta_ext_2)
-#         rel.log_beta_ext_inf = pi.f_log_beta_ext_inf(rel.log_beta_ext_inf)
+#         rel.log_beta_ext_2_exp = pi.f_log_beta_ext_2_exp(rel.log_beta_ext_2_exp)
+#         rel.log_beta_ext_inf_exp = pi.f_log_beta_ext_inf_exp(rel.log_beta_ext_inf_exp)
         
 #         # TODO: Keep track of communication cost. 
 #         # TODO: Keep track of soundness cost. 
