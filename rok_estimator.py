@@ -236,7 +236,6 @@ class Relation:
         rel.rep = self.rep + ell
         rel.log_beta_wit_2 = log(sqrt( 2**(self.log_beta_wit_2*2) +  ell * self.wdim * self.ring_params.fhat * 2**(self.log_beta_wit_inf*2) ),2) 
         
-        # TODO: Add logic for resetting norm of extracted witness 
         comm = self.ring_params.size_Rq() * (ell * (self.ring_params.nsis + self.nbot) + 3 * self.rep + 3 * ell) 
         snd = 2 * self.wdim / (2**(self.ring_params.log_q * self.ring_params.e))
         log_beta_ext_2 = self.log_beta_wit_2
