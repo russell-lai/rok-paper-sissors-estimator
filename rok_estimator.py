@@ -53,14 +53,18 @@ class RingParam:
     f: int = 1                                  # conductor
     fhat: int = 1                               # fhat = f if f is odd and f/2 if f is even
     phi: int = field(init=False)                # degree
+    log_betasis: int = 32                       # log of norm bound beta_sis for SIS problem
     log_q: int = 64                             # log of modulus q (assumed prime)
     e: int | None = None                        # inertia degree of q, i.e. R_q splits into fields of cardinality q**e 
     C: InitVar[SubtractiveSet | None] = None    # subtractive set parameters
     ring_exp_inf: float = field(init=False)     # ring expansion factor in coefficient ell_inf-norm
+    bit_security: int | None = None
 
     def __post_init__(self, C):
         if mod(self.f,4) == 2:
             raise Exception("Conductor f cannot be congruent to 2 modulo 4.")
+        if self.log_betasis >= self.log_q:
+            raise Exception("Norm bound beta_sis must be smaller than modulus q.")
         self.phi = euler_phi(self.f)
         self.ring_exp_inf = euler_phi(self.f)
         if self.C == None:
@@ -71,6 +75,7 @@ class RingParam:
             self.fhat = self.f/2
         else:
             self.fhat = self.f
+        self.bit_security = 128 # TODO: Add logic for computing SIS hardness
 
     def size_Rq(self):
         return self.phi * self.log_q
@@ -119,7 +124,7 @@ class Relation:
         """
         return deepcopy(self), Cost()
       
-    def pi_bdecomp(self,base=None,ell=None):
+    def pi_bdecomp(self,base: int | None = None,ell: int | None = None):
         """
         Returns the relation resulting from the pi_bdecomp RoK and its costs. 
         """
@@ -145,7 +150,7 @@ class Relation:
         cost = Cost(beta_ext_2=cost_beta_ext_2,beta_ext_inf=cost_beta_ext_inf,comm=cost_comm,snd=cost_snd)
         return rel, cost
     
-    def pi_split(self,d):
+    def pi_split(self,d: int):
         """     
         Returns the relation resulting from the pi_split RoK and its costs.
         """
@@ -162,11 +167,21 @@ class Relation:
         cost = Cost(beta_ext_2=cost_beta_ext_2,beta_ext_inf=cost_beta_ext_inf,comm=cost_comm,snd=cost_snd)
         return rel, cost
     
-    def pi_fold(self):
+    def pi_fold(self,repout: int):
         """
         Returns the relation resulting from the pi_fold RoK and its costs. 
         """
-        return deepcopy(self), Cost()
+        rel = deepcopy(self)
+        repin = self.rep
+        rel.rep = repout
+        rel.log_beta_ext_2 = log(sqrt(repout) * repin * self.ring_params.C.gamma_2,2)
+        rel.log_beta_ext_inf = log(sqrt(repout) * repin * self.ring_params.C.gamma_inf,2)
+        cost_beta_ext_2 = 2 * sqrt(repin) * self.ring_params.C.theta_2
+        cost_beta_ext_inf = 2 * sqrt(repin) * self.ring_params.C.theta_inf
+        cost_comm = 0
+        cost_snd = repin / (self.ring_params.C.cardinality**repout)
+        cost = Cost(beta_ext_2=cost_beta_ext_2,beta_ext_inf=cost_beta_ext_inf,comm=cost_comm,snd=cost_snd)
+        return rel, cost
     
     def pi_batch(self):
         """
