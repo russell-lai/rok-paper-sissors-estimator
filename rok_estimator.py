@@ -3,6 +3,17 @@ from typing import List
 from sage.all import euler_phi, Expression, var, mod, ceil, is_prime_power, sqrt, radical
 from lattice_lib import *
 from lattice_lib.util import *
+import importlib
+estimator = importlib.import_module("lattice-estimator.estimator")
+
+class HiddenPrints:
+    def __enter__(self):
+        self._original_stdout = sys.stdout
+        sys.stdout = open(os.devnull, "w")
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout.close()
+        sys.stdout = self._original_stdout
 
 @dataclass
 class SubtractiveSet:
@@ -58,8 +69,8 @@ class RingParam:
     e: int | None = None                        # inertia degree of q, i.e. R_q splits into fields of cardinality q**e 
     C: InitVar[SubtractiveSet | None] = None    # subtractive set parameters
     ring_exp_inf: float = field(init=False)     # ring expansion factor in coefficient ell_inf-norm
-    nsis: int = 1
-    bit_security: int | None = None
+    nsis: int | None = None
+    secpar: int | None = 128
 
     def __post_init__(self, C):
         if mod(self.f,4) == 2:
@@ -76,7 +87,15 @@ class RingParam:
             self.fhat = self.f/2
         else:
             self.fhat = self.f
-        self.bit_security = 128 # TODO: Add logic for computing SIS hardness
+        for nsis in range(1, 500):
+            sis = estimator.SIS.Parameters(self.phi*nsis, 2**self.log_q, 2**self.log_betasis)
+            with HiddenPrints():
+                costs = estimator.SIS.estimate(sis)
+            sec = min(cost["rop"] for cost in costs.values())
+            if sec > 2**self.secpar:    
+                self.nsis = nsis
+                self.secpar = floor(log(sec,2))
+                break
 
     def size_Rq(self):
         return self.phi * self.log_q
