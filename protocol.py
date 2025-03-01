@@ -53,11 +53,18 @@ class Protocol:
         history[l-1].update_readable()
         for i in range(l-1):
             j = l-i-1
+            ext_expansion_inf_2 = 0
+            if len(history[j-1].ext_expansion_inf) > 2:
+                ext_expansion_inf_2 = history[j-1].ext_expansion_inf[2]
             history[j-1].beta_ext_2 = history[j-1].ext_expansion_2[0] * history[j].beta_ext_2 + history[j-1].ext_expansion_2[1] * history[j-1].beta_wit_2
-            history[j-1].beta_ext_inf = history[j-1].ext_expansion_inf[0] * history[j].beta_ext_inf + history[j-1].ext_expansion_inf[1] * history[j-1].beta_wit_inf
+            history[j-1].beta_ext_inf = history[j-1].ext_expansion_inf[0] * history[j].beta_ext_inf + history[j-1].ext_expansion_inf[1] * history[j-1].beta_wit_inf + ext_expansion_inf_2 * history[j-1].beta_wit_2
             # note that ext_expansion_2 is of the form either [e,0] or [0,1].
             # In the first case, the extracted norm is e times that of the next round witness.
             # In the second case, the extracted norm is reset to beta_wit_2
+            # note that ext_expansion_inf is of the form either [e,0] or [0,1] or [0,0,1].
+            # In the first case, the extracted norm is e times that of the next round witness.
+            # In the second case, the extracted norm is reset to beta_inf_2
+            # In the third case, the extracted norm is reset to beta_wit_2
             
             history[j-1].update_readable()
             if 2 * history[j-1].beta_ext_2 > 2**history[j-1].sis_param["log_beta_sis"]:

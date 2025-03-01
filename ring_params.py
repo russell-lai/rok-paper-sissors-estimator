@@ -86,6 +86,21 @@ ring_param_31_30 = {
  'theta_inf': 30,
  'ring_exp_inf': 30}
 
+ring_param_257_256 = {
+  'f': 257,
+  'fhat': 257,
+ 'phi': 256,
+ 'q': 18446744073664069763,
+ 'log_q': 64,
+ 'Rq_size': 16384,
+ 'e': 2,
+ 'C': 257,
+ 'gamma_2': 256,
+ 'theta_2': 256,
+ 'gamma_inf': 256,
+ 'theta_inf': 256,
+ 'ring_exp_inf': 256}
+
 ## Power-Smooth
 
 ring_param_9240_1920 = {'f': 9240,
