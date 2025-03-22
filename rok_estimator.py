@@ -153,29 +153,37 @@ class Relation:
     Data class for relations. A Relation object contains methods modelling reductions of knowledge (RoK) each of which returns a reduced relation and the cost of the RoK. 
     
     Example:
-    sage: rel = Relation(ring_params=RingParam(f=60,nsis=2),wdim=60)
+    sage: rel = Relation(ring=RingParam(f=60,nsis=2),wdim=60)
     sage: rel_bdecomp, cost_bdecomp = rel.pi_bdecomp(ell=2)
     sage: rel_bdecomp.show()
     """
-    ring_params: RingParam = field(repr=False)      # ring parameters
+    ring: RingParam = field(repr=False)      # ring parameters
     trivial : bool = False                          # True if the relation is the "True" relation
     nout: int = 1                                   # number of compressed relations, including both commitment and non-commitment relations
     ntop: int = 1                                   # module rank of commitment
     nbot: int = 1                                   # number of non-commitment relations  
     wdim: int = 1                                   # dimension of each witness 
     rep: int = 1                                    # bundle size of witnesses 
-    log_beta_wit_2: float = 0                       # log of canonical ell_2-norm bound of witness
-    log_beta_wit_inf: float = 0                     # log of coefficient ell_inf-norm bound of witness
-    log_beta_wit_2_extract: float = 0               # log of canonical ell_2-norm bound of extracted witness, only computed after extraction
-    log_beta_wit_inf_extract: float = 0             # log of coefficient ell_inf-norm bound of extracted witness, only computed after extraction
+    log_beta_wit_2: float | None = None             # log of canonical ell_2-norm bound of witness
+    log_beta_wit_inf: float | None = None           # log of coefficient ell_inf-norm bound of witness
+    log_beta_wit_2_extract: float | None = None     # log of canonical ell_2-norm bound of extracted witness, only computed after extraction
+    log_beta_wit_inf_extract: float | None = None   # log of coefficient ell_inf-norm bound of extracted witness, only computed after extraction
     
+    def __post_init__(self):
+        if self.log_beta_wit_2 == None and self.log_beta_wit_inf == None:
+            raise Exception("Relation must have either a canonical ell_2-norm bound or a coefficient ell_inf-norm bound.")
+        if self.log_beta_wit_2 == None:
+            self.log_beta_wit_2 = ceil(log(sqrt(self.wdim * self.ring.phi * self.ring.fhat) * 2**self.log_beta_wit_inf,2))
+        if self.log_beta_wit_inf == None:
+            self.log_beta_wit_inf = self.log_beta_wit_2
+        
     def wit_size(self):
-        return self.wdim * self.rep * self.ring_params.phi * ceil(self.log_beta_wit_inf + 1)
+        return self.wdim * self.rep * self.ring.phi * ceil(self.log_beta_wit_inf + 1)
     
     def show(self,label=None,brief=False):
         label_str = f'{label:8s}' if label else 'Relation'
-        flag_log_beta_wit_2 = f'*' if self.log_beta_wit_2 > self.ring_params.log_betasis else ' '
-        flag_log_beta_wit_2_extract = f'*' if self.log_beta_wit_2_extract > self.ring_params.log_betasis else ' '
+        flag_log_beta_wit_2 = f'*' if self.log_beta_wit_2 > self.ring.log_betasis else ' '
+        flag_log_beta_wit_2_extract = f'*' if self.log_beta_wit_2_extract != None and self.log_beta_wit_2_extract > self.ring.log_betasis else ' '
         if self.trivial:
             print(f'{label_str}: True')
         elif brief:
@@ -232,7 +240,7 @@ class Relation:
         """
         rel = deepcopy(self)
         rel.trivial = True
-        comm = self.ring_params.size_Rq() * self.wdim * self.rep # Overestimating. The actual communication is likely smaller because the norm of the witness is smaller than q/2. 
+        comm = self.ring.size_Rq() * self.wdim * self.rep # Overestimating. The actual communication is likely smaller because the norm of the witness is smaller than q/2. 
         log_beta_wit_2_extract = self.log_beta_wit_2
         log_beta_wit_inf_extract = self.log_beta_wit_inf
         cost = Cost(log_beta_wit_2_extract=log_beta_wit_2_extract,log_beta_wit_inf_extract=log_beta_wit_inf_extract,comm=comm)
@@ -260,12 +268,12 @@ class Relation:
             
         rel = deepcopy(self)
         rel.rep = self.rep * ell
-        rel.log_beta_wit_2      = log(sqrt(ell * self.rep * self.wdim * self.ring_params.fhat * self.ring_params.phi) * base / 2,2)
+        rel.log_beta_wit_2      = log(sqrt(ell * self.rep * self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2)
         rel.log_beta_wit_inf    = log(floor(base / 2),2)
         
         log_beta_ext_2_exp      = log((base**ell-1)/(base-1),2)
         log_beta_ext_inf_exp    = log((base**ell-1)/(base-1),2)
-        comm = self.ring_params.size_Rq() * (ell-1) * self.nout * self.rep
+        comm = self.ring.size_Rq() * (ell-1) * self.nout * self.rep
         # snd = 0
         cost = Cost(log_beta_ext_2_exp=log_beta_ext_2_exp,log_beta_ext_inf_exp=log_beta_ext_inf_exp,comm=comm)
         
@@ -284,8 +292,8 @@ class Relation:
         rel.wdim    = ZZ(self.wdim / d)
         rel.rep     = self.rep * d
         
-        comm    = self.ring_params.size_Rq() * ((d - 1) * self.ntop + (d**2 - 1) * (self.nout - self.ntop)) * self.rep
-        snd     = (d-1) / 2**(self.ring_params.log_q * self.ring_params.residue_deg)
+        comm    = self.ring.size_Rq() * ((d - 1) * self.ntop + (d**2 - 1) * (self.nout - self.ntop)) * self.rep
+        snd     = (d-1) / 2**(self.ring.log_q * self.ring.residue_deg)
         cost = Cost(comm=comm,snd=snd)
         
         #TODO: Raise warning if 2 * extracted norm is greater than beta_sis
@@ -301,13 +309,13 @@ class Relation:
         rel = deepcopy(self)
         repin                   = self.rep
         rel.rep                 = repout
-        rel.log_beta_wit_2      = log(sqrt(repout) * repin * self.ring_params.C.gamma_2,2) + self.log_beta_wit_2
-        rel.log_beta_wit_inf    = log(sqrt(repout) * repin * self.ring_params.C.gamma_inf,2) + self.log_beta_wit_inf
+        rel.log_beta_wit_2      = log(sqrt(repout) * repin * self.ring.C.gamma_2,2) + self.log_beta_wit_2
+        rel.log_beta_wit_inf    = log(sqrt(repout) * repin * self.ring.C.gamma_inf,2) + self.log_beta_wit_inf
         
-        log_beta_ext_2_exp      = log(2 * sqrt(repin) * self.ring_params.C.theta_2,2)
-        log_beta_ext_inf_exp    = log(2 * sqrt(repin) * self.ring_params.C.theta_inf,2)
+        log_beta_ext_2_exp      = log(2 * sqrt(repin) * self.ring.C.theta_2,2)
+        log_beta_ext_inf_exp    = log(2 * sqrt(repin) * self.ring.C.theta_inf,2)
         #comm = 0
-        snd = repin / (self.ring_params.C.cardinality**repout)
+        snd = repin / (self.ring.C.cardinality**repout)
         cost = Cost(log_beta_ext_2_exp=log_beta_ext_2_exp,log_beta_ext_inf_exp=log_beta_ext_inf_exp,snd=snd)
         
         return rel, cost
@@ -321,7 +329,7 @@ class Relation:
             rel.nout = self.ntop + 1 # TODO: Allow batching into more than 1 row to allow smaller field size.
             
         # comm = 0
-        snd = self.rep * self.nbot / (2**(self.ring_params.log_q * self.ring_params.residue_deg))
+        snd = self.rep * self.nbot / (2**(self.ring.log_q * self.ring.residue_deg))
         cost = Cost(snd=snd)
         return rel, cost
     
@@ -333,18 +341,18 @@ class Relation:
         """
         
         base = 2 * 2**self.log_beta_wit_inf + 1
-        ell = ceil(log( self.ring_params.ring_exp_inf * self.wdim * 2**(self.log_beta_wit_inf * 2), base ))
+        ell = ceil(log( self.ring.ring_exp_inf * self.wdim * 2**(self.log_beta_wit_inf * 2), base ))
         
         rel = deepcopy(self)
         rel.nout            = self.nout + 3
         rel.nbot            = self.nbot + 3
         rel.rep             = self.rep + ell
-        rel.log_beta_wit_2  = log(sqrt( 2**(self.log_beta_wit_2*2) +  ell * self.wdim * self.ring_params.fhat * 2**(self.log_beta_wit_inf*2) ),2) 
+        rel.log_beta_wit_2  = log(sqrt( 2**(self.log_beta_wit_2*2) +  ell * self.wdim * self.ring.fhat * 2**(self.log_beta_wit_inf*2) ),2) 
         
-        comm                = self.ring_params.size_Rq() * (ell * (self.ring_params.nsis + self.nbot) + 3 * self.rep + 3 * ell) 
-        snd                 = 2 * self.wdim / (2**(self.ring_params.log_q * self.ring_params.residue_deg))
+        comm                = self.ring.size_Rq() * (ell * (self.ring.nsis + self.nbot) + 3 * self.rep + 3 * ell) 
+        snd                 = 2 * self.wdim / (2**(self.ring.log_q * self.ring.residue_deg))
         log_beta_ext_2_extract      = self.log_beta_wit_2
-        log_beta_ext_inf_extract    = log(sqrt(self.ring_params.fhat * self.ring_params.phi * self.wdim * self.rep),2) + self.log_beta_wit_2
+        log_beta_ext_inf_extract    = log(sqrt(self.ring.fhat * self.ring.phi * self.wdim * self.rep),2) + self.log_beta_wit_2
         cost = Cost(log_beta_wit_2_extract=log_beta_ext_2_extract,log_beta_wit_inf_extract=log_beta_ext_inf_extract,comm=comm,snd=snd)
         return rel, cost
     
@@ -366,23 +374,32 @@ class Relation:
 
 @dataclass
 class Simulation:
-    ring_params: RingParam = field(repr=False)      # ring parameters
+    ring_params: dict = field(repr=False) # ring parameters
+    rel_params: dict = field(repr=False) # relation parameters 
+    ops: List[Tuple[str, dict]] = field(repr=False) # sequence of operations
+    
+    ring: RingParam = field(repr=False,init=False)      # ring parameters
     trace : List[Tuple[str, Relation]] = field(repr=False,init=False) # execution trace
     costs : List[Tuple[str, Cost]] = field(repr=False,init=False)     # communication costs
+    
+    def __post_init__(self):
+        self.ring = RingParam(**self.ring_params)
+        rel = Relation(**self.rel_params)
+        self.simulate(rel, self.ops)
     
     def simulate(self,rel, ops):
         """
         Simulates the execution of a sequence of RoKs on a relation.
         
         Example: 
-        sage: ring_params = RingParam(f=60,log_betasis=32,log_q=64)
+        sage: ring = RingParam(f=60,log_betasis=32,log_q=64)
         sage: 
         sage: rep = 2**5
         sage: wdim = 2**15
         sage: log_beta_wit_inf = 0
-        sage: log_beta_wit_2 = ceil(log(sqrt(wdim * ring_params.phi * ring_params.fhat) * 2**log_beta_wit_inf,2))
+        sage: log_beta_wit_2 = ceil(log(sqrt(wdim * ring.phi * ring.fhat) * 2**log_beta_wit_inf,2))
         sage: 
-        sage: rel = Relation(ring_params=ring_params,wdim=wdim,rep=rep,log_beta_wit_inf=log_beta_wit_inf,log_beta_wit_2=log_beta_wit_2)
+        sage: rel = Relation(ring=ring,wdim=wdim,rep=rep,log_beta_wit_inf=log_beta_wit_inf,log_beta_wit_2=log_beta_wit_2)
         sage: 
         sage: ell = 2
         sage: d = 4
@@ -416,8 +433,8 @@ class Simulation:
                     trace[-i-2][1].log_beta_wit_inf_extract = costs[-i-1][1].log_beta_wit_inf_extract   
                     
                 # Check if any norm is overestimated. By https://eprint.iacr.org/2024/1972.pdf Corollary 1, 
-                if trace[-i-2][1].log_beta_wit_2_extract > log(sqrt(trace[-i-2][1].ring_params.fhat * trace[-i-2][1].ring_params.phi * trace[-i-2][1].wdim * trace[-i-2][1].rep),2) + trace[-i-2][1].log_beta_wit_inf_extract:
-                    trace[-i-2][1].log_beta_wit_2_extract = log(sqrt(trace[-i-2][1].ring_params.fhat * trace[-i-2][1].ring_params.phi * trace[-i-2][1].wdim * trace[-i-2][1].rep),2) + trace[-i-2][1].log_beta_wit_inf_extract
+                if trace[-i-2][1].log_beta_wit_2_extract > log(sqrt(trace[-i-2][1].ring.fhat * trace[-i-2][1].ring.phi * trace[-i-2][1].wdim * trace[-i-2][1].rep),2) + trace[-i-2][1].log_beta_wit_inf_extract:
+                    trace[-i-2][1].log_beta_wit_2_extract = log(sqrt(trace[-i-2][1].ring.fhat * trace[-i-2][1].ring.phi * trace[-i-2][1].wdim * trace[-i-2][1].rep),2) + trace[-i-2][1].log_beta_wit_inf_extract
                     # print(f"{trace[-i-2][0]}: ell-2 norm is overestimated!")
                     
                 if trace[-i-2][1].log_beta_wit_inf_extract > trace[-i-2][1].log_beta_wit_2_extract:
@@ -428,7 +445,7 @@ class Simulation:
         self.costs = costs
         
     def show(self):
-        self.ring_params.show()
+        self.ring.show()
         print(f' ')
         
         print(f'Execution Trace:')
