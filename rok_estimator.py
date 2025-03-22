@@ -16,6 +16,12 @@ class HiddenPrints:
         sys.stdout.close()
         sys.stdout = self._original_stdout
 
+def _kb(v):
+    """
+    Convert bits to kilobytes.
+    """
+    return round(float(v / 8.0 / 1024.0), 1)
+
 @dataclass
 class SubtractiveSet:
     """
@@ -133,7 +139,7 @@ class Cost:
         
         
         label_str = f'{label:8s}' if label else 'Cost'
-        print(f'{label_str}: communication = {self.comm:7d}, soundness error = 2^{log_snd}') # TODO: show in KB
+        print(f'{label_str}: communication = {_kb(self.comm):6.2f} KB, soundness error = 2^{log_snd}') # TODO: show in KB
         if not brief:
             print(f' ')
 
@@ -156,6 +162,8 @@ class Relation:
     rep: int = 1                                    # bundle size of witnesses 
     log_beta_wit_2: float = 0                       # log of canonical ell_2-norm bound of witness
     log_beta_wit_inf: float = 0                     # log of coefficient ell_inf-norm bound of witness
+    log_beta_wit_2_extract: float = 0               # log of canonical ell_2-norm bound of extracted witness, only computed after extraction
+    log_beta_wit_inf_extract: float = 0             # log of coefficient ell_inf-norm bound of extracted witness, only computed after extraction
     
     def show(self,label=None,brief=False):
         label_str = f'{label:8s}' if label else 'Relation'
