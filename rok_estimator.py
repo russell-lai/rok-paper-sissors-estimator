@@ -399,9 +399,7 @@ class Simulation:
             trace += [(op, new_rel)]
             costs += [(op, new_cost)]
             
-        # Backward direction, a.k.a. "extraction direction"
-        # TODO
-        
+        # Backward direction, a.k.a. "extraction direction"        
         if trace[-1][0] == "finish":
             for i in range(len(costs)):
                 if costs[-i-1][1].log_beta_wit_2_extract is None:
@@ -413,26 +411,15 @@ class Simulation:
                     trace[-i-2][1].log_beta_wit_inf_extract = costs[-i-1][1].log_beta_ext_inf_exp + trace[-i-1][1].log_beta_wit_inf_extract
                 else:
                     trace[-i-2][1].log_beta_wit_inf_extract = costs[-i-1][1].log_beta_wit_inf_extract   
-
-        
-        # def extract(self):
-        #     history = self.history
-        #     l = len(history)
-        #     assert history[l-1].op == "finish"
-        #     history[l-1].beta_ext_2 = history[l-1].beta_wit_2
-        #     history[l-1].beta_ext_inf = history[l-1].beta_wit_inf
-        #     history[l-1].update_readable()
-        #     for i in range(l-1):
-        #         j = l-i-1
-        #         history[j-1].beta_ext_2 = history[j-1].ext_expansion_2[0] * history[j].beta_ext_2 + history[j-1].ext_expansion_2[1] * history[j-1].beta_wit_2
-        #         history[j-1].beta_ext_inf = history[j-1].ext_expansion_inf[0] * history[j].beta_ext_inf + history[j-1].ext_expansion_inf[1] * history[j-1].beta_wit_inf
-        #         # note that ext_expansion_2 is of the form either [e,0] or [0,1].
-        #         # In the first case, the extracted norm is e times that of the next round witness.
-        #         # In the second case, the extracted norm is reset to beta_wit_2
-                
-        #         history[j-1].update_readable()
-        #         if 2 * history[j-1].beta_ext_2 > 2**history[j-1].sis_param["log_beta_sis"]:
-        #             print("Warning: SIS norm bound exceeded.")
+                    
+                # Check if any norm is overestimated. By https://eprint.iacr.org/2024/1972.pdf Corollary 1, 
+                if trace[-i-2][1].log_beta_wit_2_extract > log(sqrt(trace[-i-2][1].ring_params.fhat * trace[-i-2][1].ring_params.phi * trace[-i-2][1].wdim * trace[-i-2][1].rep),2) + trace[-i-2][1].log_beta_wit_inf_extract:
+                    trace[-i-2][1].log_beta_wit_2_extract = log(sqrt(trace[-i-2][1].ring_params.fhat * trace[-i-2][1].ring_params.phi * trace[-i-2][1].wdim * trace[-i-2][1].rep),2) + trace[-i-2][1].log_beta_wit_inf_extract
+                    # print(f"{trace[-i-2][0]}: ell-2 norm is overestimated!")
+                    
+                if trace[-i-2][1].log_beta_wit_inf_extract > trace[-i-2][1].log_beta_wit_2_extract:
+                    trace[-i-2][1].log_beta_wit_inf_extract = trace[-i-2][1].log_beta_wit_2_extract
+                    # print(f"{trace[-i-2][0]}: ell-inf norm is overestimated!")
                 
         self.trace = trace
         self.costs = costs
@@ -455,56 +442,3 @@ class Simulation:
         total_snd = sum([cost.snd for op, cost in self.costs])
         total_cost = Cost(comm=total_comm,snd=total_snd)
         total_cost.show(label="Total Cost", brief=True)
-    
-# class Protocol:
-    # Variables: 
-    # Soundness error budget
-    # List of Relations # Potential upgrade: Maintain a tree of relations
-    # List of ell_2-canonical norms of the extracted witnesses 
-    # List of ell_inf-coefficient norms of the extracted witnesses
-    # List of communication costs
-    # List of soundness errors
-    # Accumulated communication cost
-    # Accumulated soundness error
-    #
-    # Methods:
-    # - init creates a list containing a single starting relation
-    # - execute executes a RoK on the last relation in the list, appends the resulting relation to the list, keep track of the costs. If pi_finish is run, simulate extraction of the witness.
-
-
-# class Protocol:
-#     # A history is a list of states
-#     # A state is a tuple consisting of 
-#     # - a relation, 
-#     # - the name of the protocol used to reach this state, 
-#     # - the added communication cost, 
-#     # - the accumulated communication cost, 
-#     # - the added soundness error, 
-#     # - the accumulated soundness error, 
-#     # - the ell_2-canonical norm of the extracted witness (only set if pi_finish is run), 
-#     # - the ell_inf-coefficient norm of the extracted witness (only set if pi_finish is run). 
-    
-#     def execute(pi: RoK, rel: Relation):
-#         """
-#         Execute RoK pi on relation rel.
-
-#         Example:
-#         sage: rel = Relation()
-#         sage: new_rel = execute(pi_noop, rel)
-#         """
-        
-#         # TODO: Raise exception if any protocol is run after pi_finish.
-        
-#         rel.nbot = pi.f_nbot(rel.nbot)
-#         rel.nout = pi.f_nout(rel.nout)
-#         rel.wdim = pi.f_wdim(rel.wdim)
-#         rel.rep = pi.f_rep(rel.rep)
-#         rel.log_beta_wit_2 = pi.f_log_beta_wit_2(rel.log_beta_wit_2)
-#         rel.log_beta_wit_inf = pi.f_log_beta_wit_inf(rel.log_beta_wit_inf)
-#         rel.log_beta_ext_2_exp = pi.f_log_beta_ext_2_exp(rel.log_beta_ext_2_exp)
-#         rel.log_beta_ext_inf_exp = pi.f_log_beta_ext_inf_exp(rel.log_beta_ext_inf_exp)
-        
-#         # TODO: Keep track of communication cost. 
-#         # TODO: Keep track of soundness cost. 
-        
-#         return rel      # TODO: return communication and soundness costs
