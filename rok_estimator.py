@@ -384,7 +384,7 @@ class Simulation:
     
     def __post_init__(self):
         self.ring = RingParam(**self.ring_params)
-        rel = Relation(**self.rel_params)
+        rel = Relation(ring = self.ring, **self.rel_params)
         self.simulate(rel, self.ops)
     
     def simulate(self,rel, ops):
