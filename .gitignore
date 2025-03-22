@@ -1,3 +1,4 @@
 *.cpython-312.pyc
+*.cpython-313.pyc
 *-checkpoint.ipynb
 *-checkpoint.py
