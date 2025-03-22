@@ -155,7 +155,12 @@ class Relation:
         """
         Returns the relation resulting from the pi_finish RoK and its costs. 
         """
-        return deepcopy(self), Cost()
+
+        comm = self.ring_params.size_Rq() * self.wdim * self.rep # Overestimating. The actual communication is likely smaller because the norm of the witness is smaller than q/2. 
+        log_beta_wit_2 = self.log_beta_wit_2
+        log_beta_wit_inf = self.log_beta_wit_inf
+        cost = Cost(log_beta_wit_2=log_beta_ext_2,log_beta_wit_inf=log_beta_ext_inf,comm=comm)
+        return None, cost
       
     def pi_bdecomp(self,base: int | None = None,ell: int | None = None):
         """
@@ -228,7 +233,7 @@ class Relation:
         cost = Cost(snd=snd)
         return rel, cost
     
-        # TODO: Michal claims that sometimes it is not worth it running pi_batch. This cost table does not reflect this observation.
+        # There is an indirect cost for pi_batch: It increases nout by 1, and in the the communication cost of pi_split nout is multiplied by d**2 instead of d.
     
     def pi_norm(self):
         """
@@ -248,21 +253,37 @@ class Relation:
         snd = 2 * self.wdim / (2**(self.ring_params.log_q * self.ring_params.e))
         log_beta_ext_2 = self.log_beta_wit_2
         log_beta_ext_inf = log(sqrt(self.ring_params.fhat * self.ring_params.phi * self.wdim * self.rep),2) + self.log_beta_wit_2
-        cost = Cost(comm=comm,snd=snd)
+        cost = Cost(log_beta_wit_2=log_beta_ext_2,log_beta_wit_inf=log_beta_ext_inf,comm=comm,snd=snd)
         return rel, cost
     
-    def pi_ip(self):
+    def pi_ip(self): # TODO: Dummy protocol to be implemented
         """
         Returns the relation resulting from the pi_ip RoK and its costs. 
         """
         return deepcopy(self), Cost()
+
     
-    def pi_aut(self):
+    def pi_aut(self): # TODO: Dummy protocol to be implemented
         """
         Returns the relation resulting from the pi_aut RoK and its costs. 
         """
         return deepcopy(self), Cost()
     
+class Protocol:
+    # Variables: 
+    # Soundness error budget
+    # List of Relations # Potential upgrade: Maintain a tree of relations
+    # List of ell_2-canonical norms of the extracted witnesses 
+    # List of ell_inf-coefficient norms of the extracted witnesses
+    # List of communication costs
+    # List of soundness errors
+    # Accumulated communication cost
+    # Accumulated soundness error
+    #
+    # Methods:
+    # - init creates a list containing a single starting relation
+    # - execute executes a RoK on the last relation in the list, appends the resulting relation to the list, keep track of the costs. If pi_finish is run, simulate extraction of the witness.
+
 
 # class Protocol:
 #     # A history is a list of states
