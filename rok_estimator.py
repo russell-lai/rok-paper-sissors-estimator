@@ -115,6 +115,10 @@ class RingParam:
 
     def size_Rq(self):
         return self.phi * self.log_q
+    
+    def show(self):
+        print("Ring parameters:")
+        print(f"conductor f: {self.f}, degree phi: {self.phi}, modulus q: 2^{self.log_q}, beta_sis: 2^{self.log_betasis}")
 
 @dataclass
 class Cost:
@@ -124,12 +128,12 @@ class Cost:
     Example:
     sage: Cost(log_beta_ext_2_exp=1,log_beta_ext_inf_exp=1,comm=0,snd=0)
     """
-    log_beta_ext_2_exp      : float = 1        # norm expansion factor for canonical ell_2-norm after extraction
-    log_beta_ext_inf_exp    : float = 1      # norm expansion factor for coefficient ell_inf-norm after extraction
-    log_beta_wit_2          : float | None = None  # set canonical ell_2-norm of extracted witness to this value
-    log_beta_wit_inf        : float | None = None # set coefficient ell_inf-norm of extracted witness to this value
-    comm : int = 0              # communication cost
-    snd : int = 0               # soundness cost
+    log_beta_ext_2_exp          : float = 0             # norm expansion factor for canonical ell_2-norm after extraction
+    log_beta_ext_inf_exp        : float = 0             # norm expansion factor for coefficient ell_inf-norm after extraction
+    log_beta_wit_2_extract      : float | None = None   # set canonical ell_2-norm of extracted witness to this value
+    log_beta_wit_inf_extract    : float | None = None   # set coefficient ell_inf-norm of extracted witness to this value
+    comm    : int = 0              # communication cost
+    snd     : int = 0              # soundness cost
     
     def show(self,label=None,brief=False):
         if self.snd == 0:
@@ -167,10 +171,12 @@ class Relation:
     
     def show(self,label=None,brief=False):
         label_str = f'{label:8s}' if label else 'Relation'
+        flag_log_beta_wit_2 = f'*' if self.log_beta_wit_2 > self.ring_params.log_betasis else ' '
+        flag_log_beta_wit_2_extract = f'*' if self.log_beta_wit_2_extract > self.ring_params.log_betasis else ' '
         if self.trivial:
             print(f'{label_str}: True')
         elif brief:
-            print(f'{label_str}: wdim = {self.wdim:6d}, rep = {self.rep:3d}, log_beta_wit_2 = {ceil(self.log_beta_wit_2):3d}, log_beta_wit_inf = {ceil(self.log_beta_wit_inf):3d}')
+            print(f'{label_str}: wdim = {self.wdim:6d}, rep = {self.rep:3d}, log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2):3d}{flag_log_beta_wit_2} | {ceil(self.log_beta_wit_2_extract):3d}{flag_log_beta_wit_2_extract}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf):3d} | {ceil(self.log_beta_wit_inf_extract):3d})')
         else:
             print(f'Relation:')
             print(f'    H * F * W = Y')
@@ -183,7 +189,7 @@ class Relation:
             print(f'    ||sigma(W)||_2 <= 2^log_beta_wit_2')
             print(f'    ||psi(W)||_inf <= 2^log_beta_wit_inf')
             print(f'Parameters:')
-            print(f'    wdim = {self.wdim}, rep = {self.rep}, log_beta_wit_2 = {ceil(self.log_beta_wit_2)}, log_beta_wit_inf = {ceil(self.log_beta_wit_inf)}')
+            print(f'    wdim = {self.wdim}, rep = {self.rep}, log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2)}{flag_log_beta_wit_2} | {ceil(self.log_beta_wit_2_extract)}{flag_log_beta_wit_2_extract}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf)} | {ceil(self.log_beta_wit_inf_extract)})')
             print(f' ')
             
     def execute(self, op, **kwargs):
@@ -224,9 +230,9 @@ class Relation:
         rel = deepcopy(self)
         rel.trivial = True
         comm = self.ring_params.size_Rq() * self.wdim * self.rep # Overestimating. The actual communication is likely smaller because the norm of the witness is smaller than q/2. 
-        log_beta_wit_2 = self.log_beta_wit_2
-        log_beta_wit_inf = self.log_beta_wit_inf
-        cost = Cost(log_beta_wit_2=log_beta_wit_2,log_beta_wit_inf=log_beta_wit_inf,comm=comm)
+        log_beta_wit_2_extract = self.log_beta_wit_2
+        log_beta_wit_inf_extract = self.log_beta_wit_inf
+        cost = Cost(log_beta_wit_2_extract=log_beta_wit_2_extract,log_beta_wit_inf_extract=log_beta_wit_inf_extract,comm=comm)
         return rel, cost
       
     def pi_bdecomp(self,base: int | None = None,ell: int | None = None):
@@ -295,8 +301,8 @@ class Relation:
         rel.log_beta_wit_2      = log(sqrt(repout) * repin * self.ring_params.C.gamma_2,2) + self.log_beta_wit_2
         rel.log_beta_wit_inf    = log(sqrt(repout) * repin * self.ring_params.C.gamma_inf,2) + self.log_beta_wit_inf
         
-        log_beta_ext_2_exp      = 2 * sqrt(repin) * self.ring_params.C.theta_2
-        log_beta_ext_inf_exp    = 2 * sqrt(repin) * self.ring_params.C.theta_inf
+        log_beta_ext_2_exp      = log(2 * sqrt(repin) * self.ring_params.C.theta_2,2)
+        log_beta_ext_inf_exp    = log(2 * sqrt(repin) * self.ring_params.C.theta_inf,2)
         #comm = 0
         snd = repin / (self.ring_params.C.cardinality**repout)
         cost = Cost(log_beta_ext_2_exp=log_beta_ext_2_exp,log_beta_ext_inf_exp=log_beta_ext_inf_exp,snd=snd)
@@ -334,9 +340,9 @@ class Relation:
         
         comm                = self.ring_params.size_Rq() * (ell * (self.ring_params.nsis + self.nbot) + 3 * self.rep + 3 * ell) 
         snd                 = 2 * self.wdim / (2**(self.ring_params.log_q * self.ring_params.residue_deg))
-        log_beta_ext_2      = self.log_beta_wit_2
-        log_beta_ext_inf    = log(sqrt(self.ring_params.fhat * self.ring_params.phi * self.wdim * self.rep),2) + self.log_beta_wit_2
-        cost = Cost(log_beta_wit_2=log_beta_ext_2,log_beta_wit_inf=log_beta_ext_inf,comm=comm,snd=snd)
+        log_beta_ext_2_extract      = self.log_beta_wit_2
+        log_beta_ext_inf_extract    = log(sqrt(self.ring_params.fhat * self.ring_params.phi * self.wdim * self.rep),2) + self.log_beta_wit_2
+        cost = Cost(log_beta_wit_2_extract=log_beta_ext_2_extract,log_beta_wit_inf_extract=log_beta_ext_inf_extract,comm=comm,snd=snd)
         return rel, cost
     
     def pi_ip(self): # TODO: Dummy protocol to be implemented
@@ -387,15 +393,54 @@ class Simulation:
         trace = [("init", rel)]
         costs = []
 
+        # Forward direction, a.k.a. "correctness direction"
         for op, params in ops:
             new_rel, new_cost = trace[-1][1].execute(op, **params)
             trace += [(op, new_rel)]
             costs += [(op, new_cost)]
+            
+        # Backward direction, a.k.a. "extraction direction"
+        # TODO
         
+        if trace[-1][0] == "finish":
+            for i in range(len(costs)):
+                if costs[-i-1][1].log_beta_wit_2_extract is None:
+                    trace[-i-2][1].log_beta_wit_2_extract = costs[-i-1][1].log_beta_ext_2_exp + trace[-i-1][1].log_beta_wit_2_extract
+                else:
+                    trace[-i-2][1].log_beta_wit_2_extract = costs[-i-1][1].log_beta_wit_2_extract
+                
+                if costs[-i-1][1].log_beta_wit_inf_extract is None:
+                    trace[-i-2][1].log_beta_wit_inf_extract = costs[-i-1][1].log_beta_ext_inf_exp + trace[-i-1][1].log_beta_wit_inf_extract
+                else:
+                    trace[-i-2][1].log_beta_wit_inf_extract = costs[-i-1][1].log_beta_wit_inf_extract   
+
+        
+        # def extract(self):
+        #     history = self.history
+        #     l = len(history)
+        #     assert history[l-1].op == "finish"
+        #     history[l-1].beta_ext_2 = history[l-1].beta_wit_2
+        #     history[l-1].beta_ext_inf = history[l-1].beta_wit_inf
+        #     history[l-1].update_readable()
+        #     for i in range(l-1):
+        #         j = l-i-1
+        #         history[j-1].beta_ext_2 = history[j-1].ext_expansion_2[0] * history[j].beta_ext_2 + history[j-1].ext_expansion_2[1] * history[j-1].beta_wit_2
+        #         history[j-1].beta_ext_inf = history[j-1].ext_expansion_inf[0] * history[j].beta_ext_inf + history[j-1].ext_expansion_inf[1] * history[j-1].beta_wit_inf
+        #         # note that ext_expansion_2 is of the form either [e,0] or [0,1].
+        #         # In the first case, the extracted norm is e times that of the next round witness.
+        #         # In the second case, the extracted norm is reset to beta_wit_2
+                
+        #         history[j-1].update_readable()
+        #         if 2 * history[j-1].beta_ext_2 > 2**history[j-1].sis_param["log_beta_sis"]:
+        #             print("Warning: SIS norm bound exceeded.")
+                
         self.trace = trace
         self.costs = costs
         
     def show(self):
+        self.ring_params.show()
+        print(f' ')
+        
         print(f'Execution Trace:')
         for op, rel in self.trace:
             rel.show(label=op,brief=True)
