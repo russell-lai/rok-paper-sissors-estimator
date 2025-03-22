@@ -1,5 +1,5 @@
 from dataclasses import *
-from typing import List
+from typing import List, Tuple
 from sage.all import euler_phi, Expression, var, mod, ceil, floor, is_prime_power, sqrt, radical
 from lattice_lib import *
 from lattice_lib.util import *
@@ -352,38 +352,64 @@ class Relation:
         """
         return deepcopy(self), Cost()
     
-def simulate(rel, ops):
-    """
-    Simulates the execution of a sequence of RoKs on a relation.
-    
-    Example: 
-    sage: ring_params = RingParam(f=60,log_betasis=32,log_q=64)
-    sage: 
-    sage: rep = 2**5
-    sage: wdim = 2**15
-    sage: log_beta_wit_inf = 0
-    sage: log_beta_wit_2 = ceil(log(sqrt(wdim * ring_params.phi * ring_params.fhat) * 2**log_beta_wit_inf,2))
-    sage: 
-    sage: rel = Relation(ring_params=ring_params,wdim=wdim,rep=rep,log_beta_wit_inf=log_beta_wit_inf,log_beta_wit_2=log_beta_wit_2)
-    sage: 
-    sage: ell = 2
-    sage: d = 4
-    sage: 
-    sage: opener = [("norm", {}), ("batch", {}), ("split", {"d":d}), ("fold", {"repout":rep})]
-    sage: loop = [("bdecomp", {"ell":ell}), ("norm", {}), ("batch", {}), ("split", {"d":d}), ("fold", {"repout":rep})]
-    sage: ops = opener + loop + loop + opener + loop + [("finish", {})]
-    sage: 
-    sage: trace, costs = simulate(rel, ops)
-    """
-    trace = [("init", rel)]
-    costs = []
 
-    for op, params in ops:
-        new_rel, new_cost = trace[-1][1].execute(op, **params)
-        trace += [(op, new_rel)]
-        costs += [(op, new_cost)]
+
+
+@dataclass
+class Simulation:
+    ring_params: RingParam = field(repr=False)      # ring parameters
+    trace : List[Tuple[str, Relation]] = field(repr=False,init=False) # execution trace
+    costs : List[Tuple[str, Cost]] = field(repr=False,init=False)     # communication costs
     
-    return trace, costs
+    def simulate(self,rel, ops):
+        """
+        Simulates the execution of a sequence of RoKs on a relation.
+        
+        Example: 
+        sage: ring_params = RingParam(f=60,log_betasis=32,log_q=64)
+        sage: 
+        sage: rep = 2**5
+        sage: wdim = 2**15
+        sage: log_beta_wit_inf = 0
+        sage: log_beta_wit_2 = ceil(log(sqrt(wdim * ring_params.phi * ring_params.fhat) * 2**log_beta_wit_inf,2))
+        sage: 
+        sage: rel = Relation(ring_params=ring_params,wdim=wdim,rep=rep,log_beta_wit_inf=log_beta_wit_inf,log_beta_wit_2=log_beta_wit_2)
+        sage: 
+        sage: ell = 2
+        sage: d = 4
+        sage: 
+        sage: opener = [("norm", {}), ("batch", {}), ("split", {"d":d}), ("fold", {"repout":rep})]
+        sage: loop = [("bdecomp", {"ell":ell}), ("norm", {}), ("batch", {}), ("split", {"d":d}), ("fold", {"repout":rep})]
+        sage: ops = opener + loop + loop + opener + loop + [("finish", {})]
+        sage: 
+        sage: trace, costs = simulate(rel, ops)
+        """
+        trace = [("init", rel)]
+        costs = []
+
+        for op, params in ops:
+            new_rel, new_cost = trace[-1][1].execute(op, **params)
+            trace += [(op, new_rel)]
+            costs += [(op, new_cost)]
+        
+        self.trace = trace
+        self.costs = costs
+        
+    def show(self):
+        print(f'Execution Trace:')
+        for op, rel in self.trace:
+            rel.show(label=op,brief=True)
+        print(f' ')
+            
+        print(f'Costs:')
+        for op, cost in self.costs:
+            cost.show(label=op,brief=True)
+        print(f' ')
+        
+        total_comm = sum([cost.comm for op, cost in self.costs])
+        total_snd = sum([cost.snd for op, cost in self.costs])
+        total_cost = Cost(comm=total_comm,snd=total_snd)
+        total_cost.show(label="Total Cost", brief=True)
     
 # class Protocol:
     # Variables: 
