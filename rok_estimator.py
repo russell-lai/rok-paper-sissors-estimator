@@ -169,6 +169,9 @@ class Relation:
     log_beta_wit_2_extract: float = 0               # log of canonical ell_2-norm bound of extracted witness, only computed after extraction
     log_beta_wit_inf_extract: float = 0             # log of coefficient ell_inf-norm bound of extracted witness, only computed after extraction
     
+    def wit_size(self):
+        return self.wdim * self.rep * self.ring_params.phi * ceil(self.log_beta_wit_inf + 1)
+    
     def show(self,label=None,brief=False):
         label_str = f'{label:8s}' if label else 'Relation'
         flag_log_beta_wit_2 = f'*' if self.log_beta_wit_2 > self.ring_params.log_betasis else ' '
@@ -176,7 +179,7 @@ class Relation:
         if self.trivial:
             print(f'{label_str}: True')
         elif brief:
-            print(f'{label_str}: wdim = {self.wdim:6d}, rep = {self.rep:3d}, log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2):3d}{flag_log_beta_wit_2} | {ceil(self.log_beta_wit_2_extract):3d}{flag_log_beta_wit_2_extract}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf):3d} | {ceil(self.log_beta_wit_inf_extract):3d})')
+            print(f'{label_str}: wdim = {self.wdim:6d}, rep = {self.rep:3d}, log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2):3d}{flag_log_beta_wit_2} | {ceil(self.log_beta_wit_2_extract):3d}{flag_log_beta_wit_2_extract}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf):3d} | {ceil(self.log_beta_wit_inf_extract):3d}), wit size = {_kb(self.wit_size())} KB')
         else:
             print(f'Relation:')
             print(f'    H * F * W = Y')
@@ -189,7 +192,7 @@ class Relation:
             print(f'    ||sigma(W)||_2 <= 2^log_beta_wit_2')
             print(f'    ||psi(W)||_inf <= 2^log_beta_wit_inf')
             print(f'Parameters:')
-            print(f'    wdim = {self.wdim}, rep = {self.rep}, log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2)}{flag_log_beta_wit_2} | {ceil(self.log_beta_wit_2_extract)}{flag_log_beta_wit_2_extract}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf)} | {ceil(self.log_beta_wit_inf_extract)})')
+            print(f'    wdim = {self.wdim}, rep = {self.rep}, log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2)}{flag_log_beta_wit_2} | {ceil(self.log_beta_wit_2_extract)}{flag_log_beta_wit_2_extract}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf)} | {ceil(self.log_beta_wit_inf_extract)}), wit size = {_kb(self.wit_size())} KB')
             print(f' ')
             
     def execute(self, op, **kwargs):
