@@ -269,7 +269,7 @@ class Relation:
         """
         return deepcopy(self), Cost()
     
-class Protocol:
+# class Protocol:
     # Variables: 
     # Soundness error budget
     # List of Relations # Potential upgrade: Maintain a tree of relations
