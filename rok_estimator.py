@@ -22,6 +22,34 @@ def _kb(v):
     """
     return round(float(v / 8.0 / 1024.0), 1)
 
+# bytes pretty-printing
+UNITS_MAPPING = [
+    # (1<<53, ' PB'),
+    # (1<<43, ' TB'),
+    # (1<<33, ' GB'),
+    (1<<23, ' MB'),
+    (1<<13, ' KB'),
+    (1<<3, ' B'),
+]
+
+def pretty_size(bits, units=UNITS_MAPPING):
+    """Get human-readable file sizes.
+    simplified version of https://pypi.python.org/pypi/hurry.filesize/
+    """
+    for factor, suffix in units:
+        if bits >= factor:
+            break
+    # amount = int(bits / factor)
+    amount = n(bits/factor, digits=4)
+
+    if isinstance(suffix, tuple):
+        singular, multiple = suffix
+        if amount == 1:
+            suffix = singular
+        else:
+            suffix = multiple
+    return str(amount) + suffix
+
 @dataclass
 class SubtractiveSet:
     """
@@ -143,7 +171,7 @@ class Cost:
         
         
         label_str = f'{label:8s}' if label else 'Cost'
-        print(f'{label_str}: communication = {_kb(self.comm):6.2f} KB, soundness error = 2^{log_snd}') # TODO: show in KB
+        print(f'{label_str}: communication = {pretty_size(self.comm):8s}, soundness error = 2^{log_snd}') # TODO: show in KB
         if not brief:
             print(f' ')
 
@@ -187,7 +215,7 @@ class Relation:
         if self.trivial:
             print(f'{label_str}: True')
         elif brief:
-            print(f'{label_str}: wdim = {self.wdim:6d}, rep = {self.rep:3d}, log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2):3d}{flag_log_beta_wit_2} | {ceil(self.log_beta_wit_2_extract):3d}{flag_log_beta_wit_2_extract}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf):3d} | {ceil(self.log_beta_wit_inf_extract):3d}), wit size = {_kb(self.wit_size())} KB')
+            print(f'{label_str}: wdim = {self.wdim:8d}, rep = {self.rep:3d}, log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2):3d}{flag_log_beta_wit_2} | {ceil(self.log_beta_wit_2_extract):3d}{flag_log_beta_wit_2_extract}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf):3d} | {ceil(self.log_beta_wit_inf_extract):3d}), wit size = {pretty_size(self.wit_size()):8s}')
         else:
             print(f'Relation:')
             print(f'    H * F * W = Y')
@@ -200,7 +228,7 @@ class Relation:
             print(f'    ||sigma(W)||_2 <= 2^log_beta_wit_2')
             print(f'    ||psi(W)||_inf <= 2^log_beta_wit_inf')
             print(f'Parameters:')
-            print(f'    wdim = {self.wdim}, rep = {self.rep}, log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2)}{flag_log_beta_wit_2} | {ceil(self.log_beta_wit_2_extract)}{flag_log_beta_wit_2_extract}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf)} | {ceil(self.log_beta_wit_inf_extract)}), wit size = {_kb(self.wit_size())} KB')
+            print(f'    wdim = {self.wdim}, rep = {self.rep}, log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2)}{flag_log_beta_wit_2} | {ceil(self.log_beta_wit_2_extract)}{flag_log_beta_wit_2_extract}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf)} | {ceil(self.log_beta_wit_inf_extract)}), wit size = {pretty_size(self.wit_size()):8s}')
             print(f' ')
             
     def execute(self, op, **kwargs):
