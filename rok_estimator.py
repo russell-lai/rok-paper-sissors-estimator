@@ -1,10 +1,11 @@
 from dataclasses import *
 from typing import List
-from sage.all import euler_phi, Expression, var, mod, ceil, is_prime_power, sqrt, radical
+from sage.all import euler_phi, Expression, var, mod, ceil, floor, is_prime_power, sqrt, radical
 from lattice_lib import *
 from lattice_lib.util import *
 import importlib
 estimator = importlib.import_module("lattice-estimator.estimator")
+import warnings
 
 class HiddenPrints:
     def __enter__(self):
@@ -103,7 +104,8 @@ class RingParam:
                 costs = estimator.SIS.estimate(sis)
             sec = min(cost["rop"] for cost in costs.values())
             if sec < 2**self.secpar:
-                raise Exception("Specified module rank for SIS is too small for the target security level.")
+                warnings.warn("Specified module rank for SIS is too small for the target security level.")
+                # raise Exception("Specified module rank for SIS is too small for the target security level.")
 
     def size_Rq(self):
         return self.phi * self.log_q
@@ -122,14 +124,24 @@ class Cost:
     log_beta_wit_inf : float | None = None # set coefficient ell_inf-norm of extracted witness to this value
     comm : int = 0              # communication cost
     snd : int = 0               # soundness cost
+    
+    def show(self):
+        # TODO: Visualise changes in all parameters
+        print(f'communication: {self.comm}') # TODO: show in KB
+        if self.snd == 0:
+            print(f'soundness error: 2^-inf')
+        else:
+            print(f'soundness error: 2^{floor(log(self.snd,2))}')
 
 @dataclass
 class Relation:
     """
-    Data class for relations.
+    Data class for relations. A Relation object contains methods modelling reductions of knowledge (RoK) each of which returns a reduced relation and the cost of the RoK. 
     
     Example:
-    sage: Relation(ntop=1,nbot=1,nout=1,wdim=1,rep=1,log_beta_wit_2=1,log_beta_wit_inf=1)
+    sage: rel = Relation(ring_params=RingParam(f=60,nsis=2),wdim=60)
+    sage: rel_bdecomp, cost_bdecomp = rel.pi_bdecomp(ell=2)
+    sage: rel_bdecomp.show()
     """
     ring_params: RingParam = field(repr=False)      # ring parameters
     nout: int = 1                                   # number of compressed relations, including both commitment and non-commitment relations
@@ -141,7 +153,18 @@ class Relation:
     log_beta_wit_inf: float = 0                     # log of coefficient ell_inf-norm bound of witness
     
     def show(self):
-        print(f'Relation: wdim = {self.wdim}, rep = {self.rep}, log_beta_wit_2 = {ceil(self.log_beta_wit_2)}, log_beta_wit_inf = {ceil(self.log_beta_wit_inf)}')
+        print(f'Relation:')
+        print(f'    H * F * W = Y')
+        print(f'Statement:')
+        print(f'    H: nout x (ntop + nbot)')
+        print(f'    F: (ntop + nbot) x wdim')
+        print(f'    Y: nout x rep')
+        print(f'Witness:')
+        print(f'    W: wdim x rep')
+        print(f'    ||sigma(W)||_2 <= 2^log_beta_wit_2')
+        print(f'    ||psi(W)||_inf <= 2^log_beta_wit_inf')
+        print(f'Parameters:')
+        print(f'    wdim = {self.wdim}, rep = {self.rep}, log_beta_wit_2 = {ceil(self.log_beta_wit_2)}, log_beta_wit_inf = {ceil(self.log_beta_wit_inf)}')
             
     def pi_noop(self):
         """
