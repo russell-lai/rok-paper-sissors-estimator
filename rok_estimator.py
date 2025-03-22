@@ -126,12 +126,15 @@ class Cost:
     snd : int = 0               # soundness cost
     
     def show(self):
+        print(f'Parameter Changes:')
         # TODO: Visualise changes in all parameters
-        print(f'communication: {self.comm}') # TODO: show in KB
+        print(f'Costs:')
+        print(f'    communication: {self.comm}') # TODO: show in KB
         if self.snd == 0:
-            print(f'soundness error: 2^-inf')
+            print(f'    soundness error: 2^-inf')
         else:
-            print(f'soundness error: 2^{floor(log(self.snd,2))}')
+            print(f'    soundness error: 2^{floor(log(self.snd,2))}')
+        print(f' ')
 
 @dataclass
 class Relation:
@@ -165,6 +168,7 @@ class Relation:
         print(f'    ||psi(W)||_inf <= 2^log_beta_wit_inf')
         print(f'Parameters:')
         print(f'    wdim = {self.wdim}, rep = {self.rep}, log_beta_wit_2 = {ceil(self.log_beta_wit_2)}, log_beta_wit_inf = {ceil(self.log_beta_wit_inf)}')
+        print(f' ')
             
     def pi_noop(self):
         """
