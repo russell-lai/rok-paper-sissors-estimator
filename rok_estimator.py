@@ -118,23 +118,24 @@ class Cost:
     Example:
     sage: Cost(log_beta_ext_2_exp=1,log_beta_ext_inf_exp=1,comm=0,snd=0)
     """
-    log_beta_ext_2_exp : float = 1        # norm expansion factor for canonical ell_2-norm after extraction
-    log_beta_ext_inf_exp : float = 1      # norm expansion factor for coefficient ell_inf-norm after extraction
-    log_beta_wit_2 : float | None = None  # set canonical ell_2-norm of extracted witness to this value
-    log_beta_wit_inf : float | None = None # set coefficient ell_inf-norm of extracted witness to this value
+    log_beta_ext_2_exp      : float = 1        # norm expansion factor for canonical ell_2-norm after extraction
+    log_beta_ext_inf_exp    : float = 1      # norm expansion factor for coefficient ell_inf-norm after extraction
+    log_beta_wit_2          : float | None = None  # set canonical ell_2-norm of extracted witness to this value
+    log_beta_wit_inf        : float | None = None # set coefficient ell_inf-norm of extracted witness to this value
     comm : int = 0              # communication cost
     snd : int = 0               # soundness cost
     
-    def show(self):
-        print(f'Parameter Changes:')
-        # TODO: Visualise changes in all parameters
-        print(f'Costs:')
-        print(f'    communication: {self.comm}') # TODO: show in KB
+    def show(self,label=None,brief=False):
         if self.snd == 0:
-            print(f'    soundness error: 2^-inf')
+            log_snd = -oo
         else:
-            print(f'    soundness error: 2^{floor(log(self.snd,2))}')
-        print(f' ')
+            log_snd = floor(log(self.snd,2))
+        
+        
+        label_str = f'{label:8s}' if label else 'Cost'
+        print(f'{label_str}: communication = {self.comm:7d}, soundness error = 2^{log_snd}') # TODO: show in KB
+        if not brief:
+            print(f' ')
 
 @dataclass
 class Relation:
@@ -147,6 +148,7 @@ class Relation:
     sage: rel_bdecomp.show()
     """
     ring_params: RingParam = field(repr=False)      # ring parameters
+    trivial : bool = False                          # True if the relation is the "True" relation
     nout: int = 1                                   # number of compressed relations, including both commitment and non-commitment relations
     ntop: int = 1                                   # module rank of commitment
     nbot: int = 1                                   # number of non-commitment relations  
@@ -155,24 +157,48 @@ class Relation:
     log_beta_wit_2: float = 0                       # log of canonical ell_2-norm bound of witness
     log_beta_wit_inf: float = 0                     # log of coefficient ell_inf-norm bound of witness
     
-    def show(self):
-        print(f'Relation:')
-        print(f'    H * F * W = Y')
-        print(f'Statement:')
-        print(f'    H: nout x (ntop + nbot)')
-        print(f'    F: (ntop + nbot) x wdim')
-        print(f'    Y: nout x rep')
-        print(f'Witness:')
-        print(f'    W: wdim x rep')
-        print(f'    ||sigma(W)||_2 <= 2^log_beta_wit_2')
-        print(f'    ||psi(W)||_inf <= 2^log_beta_wit_inf')
-        print(f'Parameters:')
-        print(f'    wdim = {self.wdim}, rep = {self.rep}, log_beta_wit_2 = {ceil(self.log_beta_wit_2)}, log_beta_wit_inf = {ceil(self.log_beta_wit_inf)}')
-        print(f' ')
+    def show(self,label=None,brief=False):
+        label_str = f'{label:8s}' if label else 'Relation'
+        if self.trivial:
+            print(f'{label_str}: True')
+        elif brief:
+            print(f'{label_str}: wdim = {self.wdim:6d}, rep = {self.rep:3d}, log_beta_wit_2 = {ceil(self.log_beta_wit_2):3d}, log_beta_wit_inf = {ceil(self.log_beta_wit_inf):3d}')
+        else:
+            print(f'Relation:')
+            print(f'    H * F * W = Y')
+            print(f'Statement:')
+            print(f'    H: nout x (ntop + nbot)')
+            print(f'    F: (ntop + nbot) x wdim')
+            print(f'    Y: nout x rep')
+            print(f'Witness:')
+            print(f'    W: wdim x rep')
+            print(f'    ||sigma(W)||_2 <= 2^log_beta_wit_2')
+            print(f'    ||psi(W)||_inf <= 2^log_beta_wit_inf')
+            print(f'Parameters:')
+            print(f'    wdim = {self.wdim}, rep = {self.rep}, log_beta_wit_2 = {ceil(self.log_beta_wit_2)}, log_beta_wit_inf = {ceil(self.log_beta_wit_inf)}')
+            print(f' ')
             
-        # Catalogue of RoKs:
-        # pi_noop, pi_finish, pi_bdecomp, pi_split, pi_fold, pi_batch, pi_norm, pi_ip, pi_aut    
-            
+    def execute(self, op, **kwargs):
+        match op:
+            case "noop":
+                return self.pi_noop()
+            case "finish":
+                return self.pi_finish()
+            case "bdecomp":
+                return self.pi_bdecomp(**kwargs)
+            case "split":
+                return self.pi_split(**kwargs)
+            case "fold":
+                return self.pi_fold(**kwargs)
+            case "batch":
+                return self.pi_batch()
+            case "norm":
+                return self.pi_norm()
+            case "ip":
+                return self.pi_ip()
+            case "aut":
+                return self.pi_aut()
+        
     def pi_noop(self):
         """
         Returns the relation resulting from the pi_noop RoK and its costs. 
@@ -187,12 +213,13 @@ class Relation:
         
         The pi_finish RoK reduces any relation to True.
         """
-
+        rel = deepcopy(self)
+        rel.trivial = True
         comm = self.ring_params.size_Rq() * self.wdim * self.rep # Overestimating. The actual communication is likely smaller because the norm of the witness is smaller than q/2. 
         log_beta_wit_2 = self.log_beta_wit_2
         log_beta_wit_inf = self.log_beta_wit_inf
-        cost = Cost(log_beta_wit_2=log_beta_ext_2,log_beta_wit_inf=log_beta_ext_inf,comm=comm)
-        return None, cost
+        cost = Cost(log_beta_wit_2=log_beta_wit_2,log_beta_wit_inf=log_beta_wit_inf,comm=comm)
+        return rel, cost
       
     def pi_bdecomp(self,base: int | None = None,ell: int | None = None):
         """
@@ -237,7 +264,7 @@ class Relation:
             raise Exception("Cannot split the witness into d chunks. Parameter d must divide wdim.")
         
         rel = deepcopy(self)
-        rel.wdim    = self.wdim / d
+        rel.wdim    = ZZ(self.wdim / d)
         rel.rep     = self.rep * d
         
         comm    = self.ring_params.size_Rq() * ((d - 1) * self.ntop + (d**2 - 1) * (self.nout - self.ntop)) * self.rep
@@ -316,6 +343,39 @@ class Relation:
         Returns the relation resulting from the pi_aut RoK and its costs. 
         """
         return deepcopy(self), Cost()
+    
+def simulate(rel, ops):
+    """
+    Simulates the execution of a sequence of RoKs on a relation.
+    
+    Example: 
+    sage: ring_params = RingParam(f=60,log_betasis=32,log_q=64)
+    sage: 
+    sage: rep = 2**5
+    sage: wdim = 2**15
+    sage: log_beta_wit_inf = 0
+    sage: log_beta_wit_2 = ceil(log(sqrt(wdim * ring_params.phi * ring_params.fhat) * 2**log_beta_wit_inf,2))
+    sage: 
+    sage: rel = Relation(ring_params=ring_params,wdim=wdim,rep=rep,log_beta_wit_inf=log_beta_wit_inf,log_beta_wit_2=log_beta_wit_2)
+    sage: 
+    sage: ell = 2
+    sage: d = 4
+    sage: 
+    sage: opener = [("norm", {}), ("batch", {}), ("split", {"d":d}), ("fold", {"repout":rep})]
+    sage: loop = [("bdecomp", {"ell":ell}), ("norm", {}), ("batch", {}), ("split", {"d":d}), ("fold", {"repout":rep})]
+    sage: ops = opener + loop + loop + opener + loop + [("finish", {})]
+    sage: 
+    sage: trace, costs = simulate(rel, ops)
+    """
+    trace = [("init", rel)]
+    costs = []
+
+    for op, params in ops:
+        new_rel, new_cost = trace[-1][1].execute(op, **params)
+        trace += [(op, new_rel)]
+        costs += [(op, new_cost)]
+    
+    return trace, costs
     
 # class Protocol:
     # Variables: 
