@@ -67,7 +67,7 @@ class RingParam:
     phi: int = field(init=False)                # degree
     log_betasis: int = 32                       # log of norm bound beta_sis for SIS problem
     log_q: int = 64                             # log of modulus q (assumed prime)
-    residue_deg: int | None = None                        # inertia degree of q, i.e. R_q splits into fields of cardinality q**e 
+    residue_deg: int | None = None              # inertia degree of q, i.e. R_q splits into fields of cardinality q**residue_deg 
     C: InitVar[SubtractiveSet | None] = None    # subtractive set parameters
     ring_exp_inf: float = field(init=False)     # ring expansion factor in coefficient ell_inf-norm
     nsis: int | None = None                     # module rank of SIS instance
@@ -170,17 +170,22 @@ class Relation:
         print(f'    wdim = {self.wdim}, rep = {self.rep}, log_beta_wit_2 = {ceil(self.log_beta_wit_2)}, log_beta_wit_inf = {ceil(self.log_beta_wit_inf)}')
         print(f' ')
             
+        # Catalogue of RoKs:
+        # pi_noop, pi_finish, pi_bdecomp, pi_split, pi_fold, pi_batch, pi_norm, pi_ip, pi_aut    
+            
     def pi_noop(self):
         """
         Returns the relation resulting from the pi_noop RoK and its costs. 
         
-        The RoK pi_noop does nothing. It is there for testing purposes.
+        The RoK pi_noop does nothing, it reduces any relation to itself. It is there for testing purposes.
         """
         return deepcopy(self), Cost()
     
     def pi_finish(self):
         """
         Returns the relation resulting from the pi_finish RoK and its costs. 
+        
+        The pi_finish RoK reduces any relation to True.
         """
 
         comm = self.ring_params.size_Rq() * self.wdim * self.rep # Overestimating. The actual communication is likely smaller because the norm of the witness is smaller than q/2. 
@@ -192,6 +197,11 @@ class Relation:
     def pi_bdecomp(self,base: int | None = None,ell: int | None = None):
         """
         Returns the relation resulting from the pi_bdecomp RoK and its costs. 
+        
+        Parameters: Specify either the base 'base' or the target number of chunks 'ell'. 
+        
+        The pi_bdecomp increases the bundle size 'rep' and decreases the norm. 
+        
         """
         if base == None and ell == None:
             raise Exception("Parameters base and ell cannot be both undefined.")
@@ -209,9 +219,10 @@ class Relation:
         rel.log_beta_wit_2      = log(sqrt(ell * self.rep * self.wdim * self.ring_params.fhat * self.ring_params.phi) * base / 2,2)
         rel.log_beta_wit_inf    = log(floor(base / 2),2)
         
-        log_beta_ext_2_exp = log((base**ell-1)/(base-1),2)
-        log_beta_ext_inf_exp = log((base**ell-1)/(base-1),2)
+        log_beta_ext_2_exp      = log((base**ell-1)/(base-1),2)
+        log_beta_ext_inf_exp    = log((base**ell-1)/(base-1),2)
         comm = self.ring_params.size_Rq() * (ell-1) * self.nout * self.rep
+        # snd = 0
         cost = Cost(log_beta_ext_2_exp=log_beta_ext_2_exp,log_beta_ext_inf_exp=log_beta_ext_inf_exp,comm=comm)
         
         return rel, cost
@@ -219,31 +230,39 @@ class Relation:
     def pi_split(self,d: int):
         """     
         Returns the relation resulting from the pi_split RoK and its costs.
+        
+        Parameters: Target number of chunks 'd'.
         """
         if not d.divides(self.wdim):
             raise Exception("Cannot split the witness into d chunks. Parameter d must divide wdim.")
         
         rel = deepcopy(self)
-        rel.wdim = self.wdim / d
-        rel.rep = self.rep * d
+        rel.wdim    = self.wdim / d
+        rel.rep     = self.rep * d
         
-        comm = self.ring_params.size_Rq() * ((d - 1) * self.ntop + (d**2 - 1) * (self.nout - self.ntop)) * self.rep
-        cost = Cost(comm=comm)
+        comm    = self.ring_params.size_Rq() * ((d - 1) * self.ntop + (d**2 - 1) * (self.nout - self.ntop)) * self.rep
+        snd     = (d-1) / 2**(self.ring_params.log_q * self.ring_params.residue_deg)
+        cost = Cost(comm=comm,snd=snd)
+        
+        #TODO: Raise warning if 2 * extracted norm is greater than beta_sis
         
         return rel, cost
     
     def pi_fold(self,repout: int):
         """
         Returns the relation resulting from the pi_fold RoK and its costs. 
+        
+        Parameters: Output bundle size 'repout'.
         """
         rel = deepcopy(self)
-        repin = self.rep
-        rel.rep = repout
-        rel.log_beta_wit_2 = log(sqrt(repout) * repin * self.ring_params.C.gamma_2,2) + self.log_beta_wit_2
-        rel.log_beta_wit_inf = log(sqrt(repout) * repin * self.ring_params.C.gamma_inf,2) + self.log_beta_wit_inf
+        repin                   = self.rep
+        rel.rep                 = repout
+        rel.log_beta_wit_2      = log(sqrt(repout) * repin * self.ring_params.C.gamma_2,2) + self.log_beta_wit_2
+        rel.log_beta_wit_inf    = log(sqrt(repout) * repin * self.ring_params.C.gamma_inf,2) + self.log_beta_wit_inf
         
-        log_beta_ext_2_exp = 2 * sqrt(repin) * self.ring_params.C.theta_2
-        log_beta_ext_inf_exp = 2 * sqrt(repin) * self.ring_params.C.theta_inf
+        log_beta_ext_2_exp      = 2 * sqrt(repin) * self.ring_params.C.theta_2
+        log_beta_ext_inf_exp    = 2 * sqrt(repin) * self.ring_params.C.theta_inf
+        #comm = 0
         snd = repin / (self.ring_params.C.cardinality**repout)
         cost = Cost(log_beta_ext_2_exp=log_beta_ext_2_exp,log_beta_ext_inf_exp=log_beta_ext_inf_exp,snd=snd)
         
@@ -255,8 +274,10 @@ class Relation:
         """
         rel = deepcopy(self)
         if self.nout > self.ntop: 
-            rel.nout = self.ntop + 1
-        snd = self.rep * self.nbot / (2**(self.ring_params.log_q * self.ring_params.e))
+            rel.nout = self.ntop + 1 # TODO: Allow batching into more than 1 row to allow smaller field size.
+            
+        # comm = 0
+        snd = self.rep * self.nbot / (2**(self.ring_params.log_q * self.ring_params.residue_deg))
         cost = Cost(snd=snd)
         return rel, cost
     
@@ -271,15 +292,15 @@ class Relation:
         ell = ceil(log( self.ring_params.ring_exp_inf * self.wdim * 2**(self.log_beta_wit_inf * 2), base ))
         
         rel = deepcopy(self)
-        rel.nout = self.nout + 3
-        rel.nbot = self.nbot + 3
-        rel.rep = self.rep + ell
-        rel.log_beta_wit_2 = log(sqrt( 2**(self.log_beta_wit_2*2) +  ell * self.wdim * self.ring_params.fhat * 2**(self.log_beta_wit_inf*2) ),2) 
+        rel.nout            = self.nout + 3
+        rel.nbot            = self.nbot + 3
+        rel.rep             = self.rep + ell
+        rel.log_beta_wit_2  = log(sqrt( 2**(self.log_beta_wit_2*2) +  ell * self.wdim * self.ring_params.fhat * 2**(self.log_beta_wit_inf*2) ),2) 
         
-        comm = self.ring_params.size_Rq() * (ell * (self.ring_params.nsis + self.nbot) + 3 * self.rep + 3 * ell) 
-        snd = 2 * self.wdim / (2**(self.ring_params.log_q * self.ring_params.e))
-        log_beta_ext_2 = self.log_beta_wit_2
-        log_beta_ext_inf = log(sqrt(self.ring_params.fhat * self.ring_params.phi * self.wdim * self.rep),2) + self.log_beta_wit_2
+        comm                = self.ring_params.size_Rq() * (ell * (self.ring_params.nsis + self.nbot) + 3 * self.rep + 3 * ell) 
+        snd                 = 2 * self.wdim / (2**(self.ring_params.log_q * self.ring_params.residue_deg))
+        log_beta_ext_2      = self.log_beta_wit_2
+        log_beta_ext_inf    = log(sqrt(self.ring_params.fhat * self.ring_params.phi * self.wdim * self.rep),2) + self.log_beta_wit_2
         cost = Cost(log_beta_wit_2=log_beta_ext_2,log_beta_wit_inf=log_beta_ext_inf,comm=comm,snd=snd)
         return rel, cost
     
