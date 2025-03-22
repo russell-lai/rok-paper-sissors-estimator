@@ -268,7 +268,7 @@ class Relation:
         """
         rel = deepcopy(self)
         rel.trivial = True
-        comm = self.ring.size_Rq() * self.wdim * self.rep # Overestimating. The actual communication is likely smaller because the norm of the witness is smaller than q/2. 
+        comm = self.wit_size()
         log_beta_wit_2_extract = self.log_beta_wit_2
         log_beta_wit_inf_extract = self.log_beta_wit_inf
         cost = Cost(log_beta_wit_2_extract=log_beta_wit_2_extract,log_beta_wit_inf_extract=log_beta_wit_inf_extract,comm=comm)
