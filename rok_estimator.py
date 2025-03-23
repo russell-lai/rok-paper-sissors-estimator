@@ -51,6 +51,19 @@ def pretty_size(bits, units=UNITS_MAPPING):
             suffix = multiple
     return str(amount) + suffix
 
+# The following bounds are from https://eprint.iacr.org/2024/1972.pdf Corollary 1.
+def bound_canon_2_from_coeff_inf(ring, beta_inf, dim = 1):
+    return sqrt(ring.fhat * ring.phi * dim) * beta_inf 
+
+def bound_log_canon_2_from_log_coeff_inf(ring, log_beta_inf, dim = 1):
+    return log(sqrt(ring.fhat * ring.phi * dim), 2) + log_beta_inf 
+
+def bound_coeff_inf_from_canon_2(beta_2):
+    return beta_2
+
+def bound_log_coeff_inf_from_log_canon_2(log_beta_2):
+    return log_beta_2
+
 @dataclass
 class SubtractiveSet:
     """
@@ -350,7 +363,6 @@ class Relation:
         Parameters: Specify either the base 'base' or the target number of chunks 'ell'. 
         
         The pi_bdecomp increases the bundle size 'rep' and decreases the norm. 
-        
         """
         if base == None and ell == None:
             raise Exception("Parameters base and ell cannot be both undefined.")
@@ -371,8 +383,8 @@ class Relation:
             # "n_rel": self.n_rel,
             # "wdim": self.wdim,
             "rep" : self.rep * ell,
-            # "log_beta_wit_2" : log(sqrt(ell * self.rep * self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2), # measured in Frobenius norm
-            "log_beta_wit_2" : log(sqrt(self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2), # measured in max ell_2-norm over all columns
+            # "log_beta_wit_2" : bound_log_canon_2_from_log_coeff_inf(self.ring, log(floor(base / 2),2), dim=self.wdim * self.rep * ell), # measured in Frobenius norm
+            "log_beta_wit_2" : bound_log_canon_2_from_log_coeff_inf(self.ring, log(floor(base / 2),2), dim=self.wdim), # measured in max ell_2-norm over all columns
             "log_beta_wit_inf" : log(floor(base / 2),2),
         }        
         cost_param = {
@@ -497,8 +509,8 @@ class Relation:
             "n_rel": self.n_rel + 3,
             # "wdim": self.wdim,
             "rep": self.rep + ell,
-            # "log_beta_wit_2": log(sqrt( (self.rep + ell) * self.ring.fhat * self.ring.phi ), 2) + self.log_beta_wit_inf, # Measured in Frobenius norm
-            "log_beta_wit_2": max([self.log_beta_wit_2, log(sqrt( self.ring.fhat * self.ring.phi ),2) + self.log_beta_wit_inf]), # Measured in max ell_2-norm over all columns
+            # "log_beta_wit_2": bound_log_canon_2_from_log_coeff_inf(self.ring,self.log_beta_wit_inf, dim=self.wdim * (self.rep + ell)), # Measured in Frobenius norm
+            "log_beta_wit_2": max([self.log_beta_wit_2, bound_log_canon_2_from_log_coeff_inf(self.ring,self.log_beta_wit_inf, dim=self.wdim)]), # Measured in max ell_2-norm over all columns
             "log_beta_wit_inf": self.log_beta_wit_inf
         }
         cost_param = {
@@ -573,15 +585,21 @@ class Simulation:
                 else:
                     self.trace[-i-2][1].log_beta_ext_inf = self.costs[-i-1][1].log_beta_ext_inf   
                     
-                # Check if any norm is overestimated. By https://eprint.iacr.org/2024/1972.pdf Corollary 1, 
-                if self.trace[-i-2][1].log_beta_ext_2 > log(sqrt(self.trace[-i-2][1].ring.fhat * self.trace[-i-2][1].ring.phi * self.trace[-i-2][1].wdim * self.trace[-i-2][1].rep),2) + self.trace[-i-2][1].log_beta_ext_inf:
-                    self.trace[-i-2][1].log_beta_ext_2 = log(sqrt(self.trace[-i-2][1].ring.fhat * self.trace[-i-2][1].ring.phi * self.trace[-i-2][1].wdim * self.trace[-i-2][1].rep),2) + self.trace[-i-2][1].log_beta_ext_inf
+                # Check if any norm is overestimated. 
+                ring = self.trace[-i-2][1].ring
+                wdim = self.trace[-i-2][1].wdim
+                rep = self.trace[-i-2][1].rep
+                log_beta_ext_2 = self.trace[-i-2][1].log_beta_ext_2
+                log_beta_ext_inf = self.trace[-i-2][1].log_beta_ext_inf
+                if log_beta_ext_2 > bound_log_canon_2_from_log_coeff_inf(ring, log_beta_ext_inf, dim=wdim * rep):
+                    self.trace[-i-2][1].log_beta_ext_2 = bound_log_canon_2_from_log_coeff_inf(ring, log_beta_ext_inf, dim=wdim * rep)
                     # print(f"{self.trace[-i-2][0]}: ell-2 norm is overestimated!")
                     
-                if self.trace[-i-2][1].log_beta_ext_inf > self.trace[-i-2][1].log_beta_ext_2:
-                    self.trace[-i-2][1].log_beta_ext_inf = self.trace[-i-2][1].log_beta_ext_2
+                if log_beta_ext_inf > bound_log_coeff_inf_from_log_canon_2(log_beta_ext_inf):
+                    self.trace[-i-2][1].log_beta_ext_inf = bound_log_coeff_inf_from_log_canon_2(log_beta_ext_inf)
                     # print(f"{self.trace[-i-2][0]}: ell-inf norm is overestimated!")
                     
+                # Record maximum log_beta_ext_2 and log_beta_ext_inf
                 if self.trace[-i-2][1].log_beta_ext_2 > self.max_log_beta_ext_2:
                     self.max_log_beta_ext_2 = self.trace[-i-2][1].log_beta_ext_2
                 if self.trace[-i-2][1].log_beta_ext_inf > self.max_log_beta_ext_inf:
