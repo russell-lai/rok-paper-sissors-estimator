@@ -139,7 +139,7 @@ class RingParam:
         # Heuristics 2: SIS over modules in canonical ell_2-norm is as hard as SIS over ZZ in ell_2-norm
         # TODO: Also take ell_inf-norm into account
         if self.n_sis == None:    
-            for n_sis in chain(range(1,128), range(128, 2048, 32)):
+            for n_sis in range(1,2048):
                 sis = estimator.SIS.Parameters(self.phi*n_sis, 2**self.log_q, 2**self.log_beta_sis_2)  
                 with HiddenPrints():
                     costs = estimator.SIS.estimate(sis) # BUG: seems that estimator.SIS.estimate returns +Infinity when security is too low
