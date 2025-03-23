@@ -435,8 +435,8 @@ class Relation:
         """
         # Batching only when n_compress > n_commit.
         # Otherwise, there is an unintuitive indirect cost for pi_batch: It increases n_compress by 1 even if n_compress = n_commit (i.e. n_rel = 0), and in the the communication cost of pi_split n_compress is multiplied by d**2 instead of d.
+        rel = deepcopy(self)
         if self.n_compress > self.n_commit: 
-            rel = deepcopy(self)
             rel.n_compress = self.n_commit + 1 # TODO: Allow batching into more than 1 row to allow smaller field size.
             
             cost_param = {
@@ -450,7 +450,7 @@ class Relation:
             cost = Cost(**cost_param)
             return rel, cost
         else:
-            return self, Cost()
+            return rel, Cost()
     
     def pi_norm(self):
         """
