@@ -486,19 +486,22 @@ class Relation:
 class Simulation:
     ring_params: dict = field(repr=False) # ring parameters
     rel_params: dict = field(repr=False) # relation parameters 
-    # ops: List[Tuple[str, dict]] = field(repr=False) # sequence of operations
     
     ring: RingParam = field(repr=False,init=False)      # ring parameters
     trace : List[Tuple[str, Relation]] = field(repr=False,init=False) # execution trace
     costs : List[Tuple[str, Cost]] = field(repr=False,init=False)     # communication costs
+    max_log_beta_wit_2 : int = 0           # maximum log_beta_wit_2
+    max_log_beta_wit_inf : int = 0         # maximum log_beta_wit_inf
+    max_log_beta_ext_2 : int = 0           # maximum log_beta_ext_2
+    max_log_beta_ext_inf : int = 0         # maximum log_beta_ext_inf
     
     def __post_init__(self):
         self.ring = RingParam(**self.ring_params)
         rel = Relation(ring = self.ring, **self.rel_params)
         self.trace = [("init", rel)]
         self.costs = []
-        # self.simulate(self.ops)
-    
+        self.max_log_beta_wit_2 = rel.log_beta_wit_2
+        self.max_log_beta_wit_inf = rel.log_beta_wit_inf
     
     def execute(self, ops):
         """
@@ -509,6 +512,10 @@ class Simulation:
             new_rel, new_cost = self.trace[-1][1].execute(op, **params)
             self.trace += [(op, new_rel)]
             self.costs += [(op, new_cost)]
+            if new_rel.log_beta_wit_2 > self.max_log_beta_wit_2:
+                self.max_log_beta_wit_2 = new_rel.log_beta_wit_2
+            if new_rel.log_beta_wit_inf > self.max_log_beta_wit_inf:
+                self.max_log_beta_wit_inf = new_rel.log_beta_wit_inf
             
     def extract(self):
         # Backward direction, a.k.a. "extraction direction"        
@@ -532,24 +539,31 @@ class Simulation:
                 if self.trace[-i-2][1].log_beta_ext_inf > self.trace[-i-2][1].log_beta_ext_2:
                     self.trace[-i-2][1].log_beta_ext_inf = self.trace[-i-2][1].log_beta_ext_2
                     # print(f"{self.trace[-i-2][0]}: ell-inf norm is overestimated!")
+                    
+                if self.trace[-i-2][1].log_beta_ext_2 > self.max_log_beta_ext_2:
+                    self.max_log_beta_ext_2 = self.trace[-i-2][1].log_beta_ext_2
+                if self.trace[-i-2][1].log_beta_ext_inf > self.max_log_beta_ext_inf:
+                    self.max_log_beta_ext_inf = self.trace[-i-2][1].log_beta_ext_inf
         
-    def show(self):
+    def show(self,brief=False):
         self.ring.show()
         print(f' ')
         
-        self.trace[0][1].show()
+        self.trace[0][1].show(brief=brief)
         
-        print(f'Execution Trace:')
-        for op, rel in self.trace:
-            rel.show(label=op,brief=True)
-        print(f' ')
-            
-        print(f'Costs:')
-        for op, cost in self.costs:
-            cost.show(label=op,brief=True)
-        print(f' ')
+        if not brief:
+            print(f'Execution Trace:')
+            for op, rel in self.trace:
+                rel.show(label=op,brief=True)
+            print(f' ')
+                
+            print(f'Costs:')
+            for op, cost in self.costs:
+                cost.show(label=op,brief=True)
+            print(f' ')
         
         total_comm = sum([cost.comm for op, cost in self.costs])
         total_snd_err = sum([cost.snd_err for op, cost in self.costs])
         total_cost = Cost(comm=total_comm,snd_err=total_snd_err)
         total_cost.show(label="Total Cost", brief=True)
+        print(f'Maximum log ell_2-norm (real | extr) = ({ceil(self.max_log_beta_ext_2):3d} | {ceil(self.max_log_beta_ext_inf):3d}), log SIS norm bound = {self.ring.log_beta_sis_2}')
