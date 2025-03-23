@@ -222,7 +222,7 @@ class Relation:
     trivial : bool = False                          # True if the relation is the "True" relation
     n_compress: int | None = None                   # number of compressed relations, including both commitment and non-commitment relations
     n_commit: int | None = None                     # module rank of commitment, will be overwritten by self.ring.n_sis.
-    n_rel: int = 1                                  # number of (non-commitment) relations  
+    n_rel: int = 0                                  # number of (non-commitment) relations  
     wdim: int = 1                                   # dimension of each witness 
     rep: int = 1                                    # bundle size of witnesses 
     log_beta_wit_2: float | None = None             # log of canonical ell_2-norm bound of witness
@@ -411,24 +411,25 @@ class Relation:
     def pi_batch(self):
         """
         Returns the relation resulting from the pi_batch RoK and its costs. 
-        
-        There is an indirect cost for pi_batch: It increases n_compress by 1 if n_compress = n_commit (i.e. n_rel = 0), and in the the communication cost of pi_split n_compress is multiplied by d**2 instead of d.
         """
-        rel = deepcopy(self)
+        # Batching only when n_compress > n_commit.
+        # Otherwise, there is an unintuitive indirect cost for pi_batch: It increases n_compress by 1 even if n_compress = n_commit (i.e. n_rel = 0), and in the the communication cost of pi_split n_compress is multiplied by d**2 instead of d.
         if self.n_compress > self.n_commit: 
+            rel = deepcopy(self)
             rel.n_compress = self.n_commit + 1 # TODO: Allow batching into more than 1 row to allow smaller field size.
             
-        cost_param = {
-            # "log_beta_ext_2_expansion" : 0,
-            # "log_beta_ext_inf_expansion" : 0,
-            # "log_beta_ext_2" : None,
-            # "log_beta_ext_inf" : None,
-            # "comm" : 0,
-            "snd_err" : self.rep * self.n_rel / (2**(self.ring.log_q * self.ring.residue_deg))
-        }
-        cost = Cost(**cost_param)
-        
-        return rel, cost
+            cost_param = {
+                # "log_beta_ext_2_expansion" : 0,
+                # "log_beta_ext_inf_expansion" : 0,
+                # "log_beta_ext_2" : None,
+                # "log_beta_ext_inf" : None,
+                # "comm" : 0,
+                "snd_err" : self.rep * self.n_rel / (2**(self.ring.log_q * self.ring.residue_deg))
+            }
+            cost = Cost(**cost_param)
+            return rel, cost
+        else:
+            return self, Cost()
     
     def pi_norm(self):
         """
@@ -472,9 +473,6 @@ class Relation:
         Returns the relation resulting from the pi_aut RoK and its costs. 
         """
         return deepcopy(self), Cost()
-    
-
-
 
 @dataclass
 class Simulation:
