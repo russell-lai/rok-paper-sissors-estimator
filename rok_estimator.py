@@ -179,7 +179,15 @@ class Cost:
     Data class for costs of reductions of knowledge.
     
     Example:
-    sage: Cost(log_beta_ext_2_expansion=1,log_beta_ext_inf_expansion=1,comm=0,snd=0)
+    sage: cost_param = {
+            # "log_beta_ext_2_expansion" : 0,
+            # "log_beta_ext_inf_expansion" : 0, 
+            # "log_beta_ext_2" : None, 
+            # "log_beta_ext_inf" : None,
+            # "comm" : 0,
+            # "snd" : 0
+        }
+    sage: Cost(**cost_param)
     """
     log_beta_ext_2_expansion          : float = 0             # norm expansion factor for canonical ell_2-norm after extraction
     log_beta_ext_inf_expansion        : float = 0             # norm expansion factor for coefficient ell_inf-norm after extraction
@@ -240,8 +248,8 @@ class Relation:
     
     def show(self,label=None,brief=False):
         label_str = f'{label:8s}' if label else 'Relation'
-        flag_log_beta_wit_2 = f'*' if self.log_beta_wit_2 > self.ring.log_beta_sis_2 else ' ' # TODO: This seems to be underestimating security since log_beta_wit_2 is measuring Frobenius norm 
-        flag_log_beta_ext_2 = f'*' if self.log_beta_ext_2 != None and self.log_beta_ext_2 > self.ring.log_beta_sis_2 else ' ' # TODO: This seems to be underestimating security since log_beta_ext_2 is measuring Frobenius norm 
+        flag_log_beta_wit_2 = f'*' if self.log_beta_wit_2 + 1 > self.ring.log_beta_sis_2 else ' ' # TODO: This seems to be underestimating security since log_beta_wit_2 is measuring Frobenius norm 
+        flag_log_beta_ext_2 = f'*' if self.log_beta_ext_2 != None and self.log_beta_ext_2 + 1> self.ring.log_beta_sis_2 else ' ' # TODO: This seems to be underestimating security since log_beta_ext_2 is measuring Frobenius norm 
         if self.trivial:
             print(f'{label_str}: True')
         elif brief:
@@ -333,11 +341,15 @@ class Relation:
         # rel.log_beta_wit_2      = log(sqrt(self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2) # measured in max ell_2-norm over all columns
         rel.log_beta_wit_inf    = log(floor(base / 2),2)
         
-        log_beta_ext_2_expansion      = log((base**ell-1)/(base-1),2)
-        log_beta_ext_inf_expansion    = log((base**ell-1)/(base-1),2)
-        comm = self.ring.size_Rq() * (ell-1) * self.n_compress * self.rep
-        # snd = 0
-        cost = Cost(log_beta_ext_2_expansion=log_beta_ext_2_expansion,log_beta_ext_inf_expansion=log_beta_ext_inf_expansion,comm=comm)
+        cost_param = {
+            "log_beta_ext_2_expansion" : log((base**ell-1)/(base-1),2),
+            "log_beta_ext_inf_expansion" : log((base**ell-1)/(base-1),2),
+            # "log_beta_ext_2" : None,
+            # "log_beta_ext_inf" : None,
+            "comm" : self.ring.size_Rq() * (ell-1) * self.n_compress * self.rep,
+            # "snd" : 0
+        }
+        cost = Cost(**cost_param)
         
         return rel, cost
     
@@ -353,12 +365,16 @@ class Relation:
         rel = deepcopy(self)
         rel.wdim    = ZZ(self.wdim / d)
         rel.rep     = self.rep * d
-        
-        comm    = self.ring.size_Rq() * ((d - 1) * self.n_commit + (d**2 - 1) * (self.n_compress - self.n_commit)) * self.rep
-        snd     = (d-1) / 2**(self.ring.log_q * self.ring.residue_deg)
-        cost = Cost(comm=comm,snd=snd)
-        
-        #TODO: Raise warning if 2 * extracted norm is greater than beta_sis
+                
+        cost_param = {
+            # "log_beta_ext_2_expansion" : 0,
+            # "log_beta_ext_inf_expansion" : 0,
+            # "log_beta_ext_2" : None,
+            # "log_beta_ext_inf" : None,
+            "comm" : self.ring.size_Rq() * ((d-1) * self.n_commit + (d**2-1) * (self.n_compress-self.n_commit)) * self.rep,
+            "snd" : (d-1) / 2**(self.ring.log_q * self.ring.residue_deg)
+        }
+        cost = Cost(**cost_param)
         
         return rel, cost
     
@@ -379,28 +395,39 @@ class Relation:
         rel.log_beta_wit_2      = log(sqrt(repout) * repin * self.ring.C.gamma_2,2) + self.log_beta_wit_2 # Measured in Frobenius norm
         rel.log_beta_wit_inf    = log(sqrt(repout) * repin * self.ring.C.gamma_inf,2) + self.log_beta_wit_inf # TODO: Why is there a factor of repout?
         
-        log_beta_ext_2_expansion      = log(2 * sqrt(repin) * self.ring.C.theta_2,2)
-        log_beta_ext_inf_expansion    = log(2 * sqrt(repin) * self.ring.C.theta_inf,2)
-        #comm = 0
-        snd = repin / (self.ring.C.cardinality**repout)
-        cost = Cost(log_beta_ext_2_expansion=log_beta_ext_2_expansion,log_beta_ext_inf_expansion=log_beta_ext_inf_expansion,snd=snd)
+        cost_param = {
+            "log_beta_ext_2_expansion" : log(2 * sqrt(repin) * self.ring.C.theta_2,2),
+            "log_beta_ext_inf_expansion" : log(2 * sqrt(repin) * self.ring.C.theta_inf,2),
+            # "log_beta_ext_2" : None,
+            # "log_beta_ext_inf" : None,
+            # "comm" : 0,
+            "snd" : repin / (self.ring.C.cardinality**repout)
+        }
+        cost = Cost(**cost_param)
         
         return rel, cost
     
     def pi_batch(self):
         """
         Returns the relation resulting from the pi_batch RoK and its costs. 
+        
+        There is an indirect cost for pi_batch: It increases n_compress by 1 if n_compress = n_commit (i.e. n_rel = 0), and in the the communication cost of pi_split n_compress is multiplied by d**2 instead of d.
         """
         rel = deepcopy(self)
         if self.n_compress > self.n_commit: 
             rel.n_compress = self.n_commit + 1 # TODO: Allow batching into more than 1 row to allow smaller field size.
             
-        # comm = 0
-        snd = self.rep * self.n_rel / (2**(self.ring.log_q * self.ring.residue_deg))
-        cost = Cost(snd=snd)
+        cost_param = {
+            # "log_beta_ext_2_expansion" : 0,
+            # "log_beta_ext_inf_expansion" : 0,
+            # "log_beta_ext_2" : None,
+            # "log_beta_ext_inf" : None,
+            # "comm" : 0,
+            "snd" : self.rep * self.n_rel / (2**(self.ring.log_q * self.ring.residue_deg))
+        }
+        cost = Cost(**cost_param)
+        
         return rel, cost
-    
-        # There is an indirect cost for pi_batch: It increases n_compress by 1, and in the the communication cost of pi_split n_compress is multiplied by d**2 instead of d.
     
     def pi_norm(self):
         """
@@ -414,13 +441,19 @@ class Relation:
         rel.n_compress            = self.n_compress + 3
         rel.n_rel            = self.n_rel + 3
         rel.rep             = self.rep + ell
-        rel.log_beta_wit_2  = log(sqrt( 2**(self.log_beta_wit_2*2) +  ell * self.wdim * self.ring.fhat * 2**(self.log_beta_wit_inf*2) ),2) 
+        rel.log_beta_wit_2  = log(sqrt( 2**(self.log_beta_wit_2*2) +  ell * self.wdim * self.ring.fhat * 2**(self.log_beta_wit_inf*2) ),2) # Measured in Frobenius norm?
+        rel.log_beta_wit_inf = max([rel.log_beta_wit_inf, log(sqrt( ell * self.wdim * self.ring.fhat * 2**(self.log_beta_wit_inf*2) ),2)]) # TODO: Verify
+
+        cost_param = {
+            # "log_beta_ext_2_expansion" : 0,
+            # "log_beta_ext_inf_expansion" : 0, 
+            "log_beta_ext_2" : self.log_beta_wit_2, 
+            "log_beta_ext_inf" : log(sqrt(self.ring.fhat * self.ring.phi * self.wdim * self.rep),2) + self.log_beta_wit_2, # TODO: is the self.rep factor needed? 
+            "comm" : self.ring.size_Rq() * (ell * (self.ring.n_sis + self.n_rel) + 3 * self.rep + 3 * ell),
+            "snd" : 2 * self.wdim / (2**(self.ring.log_q * self.ring.residue_deg))
+        }
+        cost = Cost(**cost_param)
         
-        comm                = self.ring.size_Rq() * (ell * (self.ring.n_sis + self.n_rel) + 3 * self.rep + 3 * ell) 
-        snd                 = 2 * self.wdim / (2**(self.ring.log_q * self.ring.residue_deg))
-        log_beta_ext_2_extract      = self.log_beta_wit_2
-        log_beta_ext_inf_extract    = log(sqrt(self.ring.fhat * self.ring.phi * self.wdim * self.rep),2) + self.log_beta_wit_2
-        cost = Cost(log_beta_ext_2=log_beta_ext_2_extract,log_beta_ext_inf=log_beta_ext_inf_extract,comm=comm,snd=snd)
         return rel, cost
     
     def pi_ip(self): # TODO: Dummy protocol to be implemented
@@ -484,11 +517,11 @@ class Simulation:
                 # Check if any norm is overestimated. By https://eprint.iacr.org/2024/1972.pdf Corollary 1, 
                 if self.trace[-i-2][1].log_beta_ext_2 > log(sqrt(self.trace[-i-2][1].ring.fhat * self.trace[-i-2][1].ring.phi * self.trace[-i-2][1].wdim * self.trace[-i-2][1].rep),2) + self.trace[-i-2][1].log_beta_ext_inf:
                     self.trace[-i-2][1].log_beta_ext_2 = log(sqrt(self.trace[-i-2][1].ring.fhat * self.trace[-i-2][1].ring.phi * self.trace[-i-2][1].wdim * self.trace[-i-2][1].rep),2) + self.trace[-i-2][1].log_beta_ext_inf
-                    # print(f"{trace[-i-2][0]}: ell-2 norm is overestimated!")
+                    # print(f"{self.trace[-i-2][0]}: ell-2 norm is overestimated!")
                     
                 if self.trace[-i-2][1].log_beta_ext_inf > self.trace[-i-2][1].log_beta_ext_2:
                     self.trace[-i-2][1].log_beta_ext_inf = self.trace[-i-2][1].log_beta_ext_2
-                    # print(f"{trace[-i-2][0]}: ell-inf norm is overestimated!")
+                    # print(f"{self.trace[-i-2][0]}: ell-inf norm is overestimated!")
         
     def show(self):
         self.ring.show()
