@@ -6,6 +6,7 @@ from lattice_lib.util import *
 import importlib
 estimator = importlib.import_module("lattice-estimator.estimator")
 import warnings
+from itertools import chain
 
 class HiddenPrints:
     def __enter__(self):
@@ -138,15 +139,17 @@ class RingParam:
         # Heuristics 2: SIS over modules in canonical ell_2-norm is as hard as SIS over ZZ in ell_2-norm
         # TODO: Also take ell_inf-norm into account
         if self.n_sis == None:    
-            for n_sis in range(1, 500):
+            for n_sis in chain(range(1,128), range(128, 2048, 32)):
                 sis = estimator.SIS.Parameters(self.phi*n_sis, 2**self.log_q, 2**self.log_beta_sis_2)  
                 with HiddenPrints():
-                    costs = estimator.SIS.estimate(sis)
+                    costs = estimator.SIS.estimate(sis) # BUG: seems that estimator.SIS.estimate returns +Infinity when security is too low
                 sec = min(cost["rop"] for cost in costs.values())
-                if sec >= 2**self.secpar:    
+                if sec < oo and sec >= 2**self.secpar:    
                     self.n_sis = n_sis
                     self.secpar = floor(log(sec,2))
                     break
+            if self.n_sis == None:
+                raise Exception("All SIS module rank considered are too small for the target security level.")
         else:   
             sis = estimator.SIS.Parameters(self.phi*self.n_sis, 2**self.log_q, 2**self.log_beta_sis_2)
             with HiddenPrints():
