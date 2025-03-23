@@ -217,19 +217,20 @@ class Relation:
     sage: rel = Relation(ring=RingParam(f=60,n_sis=2),wdim=60)
     sage: rel_bdecomp, cost_bdecomp = rel.pi_bdecomp(ell=2)
     sage: rel_bdecomp.show()
-    sage:
+    
+    Example when self if a Relation object, useful when defining new RoKs:
     sage: rel_params = {
-            "ring": rel.ring,
-            "trivial": rel.trivial,
-            "n_compress": rel.n_compress,
-            "n_commit": rel.n_commit,
-            "n_rel": rel.n_rel,
-            "wdim": rel.wdim,
-            "rep": rel.rep,
-            "log_beta_wit_2": rel.log_beta_wit_2,
-            "log_beta_wit_inf": rel.log_beta_wit_inf
+            "ring": self.ring,
+            "trivial": self.trivial,
+            "n_compress": self.n_compress,
+            "n_commit": self.n_commit,
+            "n_rel": self.n_rel,
+            "wdim": self.wdim,
+            "rep": self.rep,
+            "log_beta_wit_2": self.log_beta_wit_2,
+            "log_beta_wit_inf": self.log_beta_wit_inf
         }
-    sage: Relation(**rel_params)
+    sage: replace(self, **rel_params)
     """
     ring: RingParam = field(repr=False)             # ring parameters
     trivial : bool = False                          # True if the relation is the "True" relation
@@ -321,9 +322,17 @@ class Relation:
         
         The pi_finish RoK reduces any relation to True.
         """
-        rel = deepcopy(self)
-        rel.trivial = True
-        
+        rel_param = {
+            # "ring": self.ring,
+            "trivial": True,
+            # "n_compress": self.n_compress,
+            # "n_commit": self.n_commit,
+            # "n_rel": self.n_rel,
+            # "wdim": self.wdim,
+            # "rep": self.rep,
+            # "log_beta_wit_2": self.log_beta_wit_2,
+            # "log_beta_wit_inf": self.log_beta_wit_inf
+        }
         cost_param = {
             # "log_beta_ext_2_expansion" : 0,
             # "log_beta_ext_inf_expansion" : 0, 
@@ -332,9 +341,7 @@ class Relation:
             "comm" : self.wit_size(),
             # "snd_err" : 0
         }
-        cost = Cost(**cost_param)
-        
-        return rel, cost
+        return replace(self, **rel_param), Cost(**cost_param)
       
     def pi_bdecomp(self,base: int | None = None,ell: int | None = None):
         """
@@ -355,13 +362,19 @@ class Relation:
             base = ceil( (2*(2**self.log_beta_wit_inf)+1)**(1/ell) ) 
             if base <= 1:
                 raise Exception("The choice of ell is impossible. Parameter base must be greater than 1.")
-            
-        rel = deepcopy(self)
-        rel.rep = self.rep * ell
-        # rel.log_beta_wit_2      = log(sqrt(ell * self.rep * self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2) # measured in Frobenius norm
-        rel.log_beta_wit_2      = log(sqrt(self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2) # measured in max ell_2-norm over all columns
-        rel.log_beta_wit_inf    = log(floor(base / 2),2)
-        
+
+        rel_param = {
+            # "ring": self.ring,
+            # "trivial": self.trivial,
+            # "n_compress": self.n_compress,
+            # "n_commit": self.n_commit,
+            # "n_rel": self.n_rel,
+            # "wdim": self.wdim,
+            "rep" : self.rep * ell,
+            # "log_beta_wit_2" : log(sqrt(ell * self.rep * self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2), # measured in Frobenius norm
+            "log_beta_wit_2" : log(sqrt(self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2), # measured in max ell_2-norm over all columns
+            "log_beta_wit_inf" : log(floor(base / 2),2),
+        }        
         cost_param = {
             "log_beta_ext_2_expansion" : log((base**ell-1)/(base-1),2),
             "log_beta_ext_inf_expansion" : log((base**ell-1)/(base-1),2),
@@ -370,9 +383,7 @@ class Relation:
             "comm" : self.ring.size_Rq() * (ell-1) * self.n_compress * self.rep,
             # "snd_err" : 0
         }
-        cost = Cost(**cost_param)
-        
-        return rel, cost
+        return replace(self, **rel_param), Cost(**cost_param)
     
     def pi_split(self,d: int):
         """     
@@ -382,11 +393,18 @@ class Relation:
         """
         if not d.divides(self.wdim):
             raise Exception("Cannot split the witness into d chunks. Parameter d must divide wdim.")
-        
-        rel = deepcopy(self)
-        rel.wdim    = ZZ(self.wdim / d)
-        rel.rep     = self.rep * d
                 
+        rel_params = {
+            # "ring": self.ring,
+            # "trivial": self.trivial,
+            # "n_compress": self.n_compress,
+            # "n_commit": self.n_commit,
+            # "n_rel": self.n_rel,
+            "wdim": ZZ(self.wdim / d),
+            "rep": self.rep * d,
+            # "log_beta_wit_2": self.log_beta_wit_2,
+            # "log_beta_wit_inf": self.log_beta_wit_inf
+        }        
         cost_param = {
             # "log_beta_ext_2_expansion" : 0,
             # "log_beta_ext_inf_expansion" : 0,
@@ -395,9 +413,7 @@ class Relation:
             "comm" : self.ring.size_Rq() * ((d-1) * self.n_commit + (d**2-1) * (self.n_compress-self.n_commit)) * self.rep,
             "snd_err" : (d-1) / 2**(self.ring.log_q * self.ring.residue_deg)
         }
-        cost = Cost(**cost_param)
-        
-        return rel, cost
+        return replace(self, **rel_params), Cost(**cost_param)
     
     def pi_fold(self, repout: int | None = None):
         """
@@ -407,16 +423,23 @@ class Relation:
         
         Parameters: Output bundle size 'repout'.
         """
-        rel = deepcopy(self)
-        repin                   = self.rep
+        repin = self.rep
         if repout == None:
             # Ensure that repin / (self.ring.C.cardinality**repout) <= 2^-kappa_target  
             repout = ceil((self.ring.kappa_target + log(repin,2)) / log(self.ring.C.cardinality,2))
-        rel.rep                 = repout
-        # rel.log_beta_wit_2      = log(sqrt(repout) * repin * self.ring.C.gamma_2,2) + self.log_beta_wit_2 # Measured in Frobenius norm
-        rel.log_beta_wit_2      = log(repin * self.ring.C.gamma_2,2) + self.log_beta_wit_2 # Measured in max ell_2-norm over all columns
-        rel.log_beta_wit_inf    = log(repin * self.ring.C.gamma_inf,2) + self.log_beta_wit_inf 
         
+        rel_params = {
+            # "ring": self.ring,
+            # "trivial": self.trivial,
+            # "n_compress": self.n_compress,
+            # "n_commit": self.n_commit,
+            # "n_rel": self.n_rel,
+            # "wdim": self.wdim,
+            "rep": repout,
+            # "log_beta_wit_2": log(sqrt(repout) * repin * self.ring.C.gamma_2,2) + self.log_beta_wit_2, # Measured in Frobenius norm
+            "log_beta_wit_2": log(repin * self.ring.C.gamma_2,2) + self.log_beta_wit_2, # Measured in max ell_2-norm over all columns
+            "log_beta_wit_inf": log(repin * self.ring.C.gamma_inf,2) + self.log_beta_wit_inf 
+        }
         cost_param = {
             "log_beta_ext_2_expansion" : log(2 * sqrt(repin) * self.ring.C.theta_2,2),
             "log_beta_ext_inf_expansion" : log(2 * self.ring.C.theta_inf,2),
@@ -424,10 +447,8 @@ class Relation:
             # "log_beta_ext_inf" : None,
             # "comm" : 0,
             "snd_err" : repin / (self.ring.C.cardinality**repout)
-        }
-        cost = Cost(**cost_param)
-        
-        return rel, cost
+        }        
+        return replace(self, **rel_params), Cost(**cost_param)
     
     def pi_batch(self):
         """
@@ -435,10 +456,18 @@ class Relation:
         """
         # Batching only when n_compress > n_commit.
         # Otherwise, there is an unintuitive indirect cost for pi_batch: It increases n_compress by 1 even if n_compress = n_commit (i.e. n_rel = 0), and in the the communication cost of pi_split n_compress is multiplied by d**2 instead of d.
-        rel = deepcopy(self)
         if self.n_compress > self.n_commit: 
-            rel.n_compress = self.n_commit + 1 # TODO: Allow batching into more than 1 row to allow smaller field size.
-            
+            rel_params = {
+                # "ring": self.ring,
+                # "trivial": self.trivial,
+                "n_compress": self.n_commit + 1, # TODO: Allow batching into more than 1 row to allow smaller field size.
+                # "n_commit": self.n_commit,
+                # "n_rel": self.n_rel,
+                # "wdim": self.wdim,
+                # "rep": self.rep,
+                # "log_beta_wit_2": self.log_beta_wit_2,
+                # "log_beta_wit_inf": self.log_beta_wit_inf
+            }
             cost_param = {
                 # "log_beta_ext_2_expansion" : 0,
                 # "log_beta_ext_inf_expansion" : 0,
@@ -447,29 +476,30 @@ class Relation:
                 # "comm" : 0,
                 "snd_err" : self.rep * self.n_rel / (2**(self.ring.log_q * self.ring.residue_deg))
             }
-            cost = Cost(**cost_param)
-            return rel, cost
+            return replace(self, **rel_params), Cost(**cost_param)
         else:
-            return rel, Cost()
+            return deepcopy(self), Cost()
     
     def pi_norm(self):
         """
         Returns the relation resulting from the pi_norm RoK and its costs. 
         """
-        
         base = 2 * 2**self.log_beta_wit_inf + 1  # base = 2 * beta_wit_inf + 1
         ell = ceil(log( self.ring.ring_exp_inf * self.wdim * 2**(self.log_beta_wit_inf * 2), base )) # ell >= log( ring_exp_inf * wdim * beta_wit_inf^2, base )
         
-        rel = deepcopy(self)
-        rel.n_compress            = self.n_compress + 3
-        rel.n_rel            = self.n_rel + 3
-        rel.rep             = self.rep + ell
-        
         beta_V_squared = ell * self.wdim * self.ring.fhat * 2**(self.log_beta_wit_inf*2) # TODO: Verify
-        # rel.log_beta_wit_2  = log(sqrt( 2**(self.log_beta_wit_2*2) +  beta_V_squared ),2) # Measured in Frobenius norm
-        rel.log_beta_wit_2  = max([self.log_beta_wit_2, log(sqrt( beta_V_squared ),2)]) # Measured in max ell_2-norm over all columns
-        rel.log_beta_wit_inf = max([self.log_beta_wit_inf, log(sqrt( beta_V_squared ),2)]) 
-
+        rel_params = {
+            # "ring": self.ring,
+            # "trivial": self.trivial,
+            "n_compress": self.n_compress + 3,
+            # "n_commit": self.n_commit,
+            "n_rel": self.n_rel + 3,
+            # "wdim": self.wdim,
+            "rep": self.rep + ell,
+            # "log_beta_wit_2": log(sqrt( 2**(self.log_beta_wit_2*2) +  beta_V_squared ),2), # Measured in Frobenius norm
+            "log_beta_wit_2": max([self.log_beta_wit_2, log(sqrt( beta_V_squared ),2)]), # Measured in max ell_2-norm over all columns
+            "log_beta_wit_inf": max([self.log_beta_wit_inf, log(sqrt( beta_V_squared ),2)]) 
+        }
         cost_param = {
             # "log_beta_ext_2_expansion" : 0,
             # "log_beta_ext_inf_expansion" : 0, 
@@ -477,10 +507,8 @@ class Relation:
             "log_beta_ext_inf" :    self.log_beta_wit_2, 
             "comm" :                self.ring.size_Rq() * (ell * (self.ring.n_sis + self.n_rel) + 3 * self.rep + 3 * ell),
             "snd_err" :             2 * self.wdim / (2**(self.ring.log_q * self.ring.residue_deg))
-        }
-        cost = Cost(**cost_param)
-        
-        return rel, cost
+        }        
+        return replace(self, **rel_params), Cost(**cost_param)
     
     def pi_ip(self): # TODO: Dummy protocol to be implemented
         """
