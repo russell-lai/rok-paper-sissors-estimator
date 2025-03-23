@@ -185,7 +185,7 @@ class Cost:
             # "log_beta_ext_2" : None, 
             # "log_beta_ext_inf" : None,
             # "comm" : 0,
-            # "snd" : 0
+            # "snd_err" : 0
         }
     sage: Cost(**cost_param)
     """
@@ -194,17 +194,17 @@ class Cost:
     log_beta_ext_2      : float | None = None   # set canonical ell_2-norm of extracted witness to this value
     log_beta_ext_inf    : float | None = None   # set coefficient ell_inf-norm of extracted witness to this value
     comm    : int = 0              # communication cost
-    snd     : int = 0              # soundness cost
+    snd_err     : int = 0              # soundness cost
     
     def show(self,label=None,brief=False):
-        if self.snd == 0:
-            log_snd = -oo
+        if self.snd_err == 0:
+            log_snd_err = -oo
         else:
-            log_snd = floor(log(self.snd,2))
+            log_snd_err = floor(log(self.snd_err,2))
         
         
         label_str = f'{label:8s}' if label else 'Cost'
-        print(f'{label_str}: communication = {pretty_size(self.comm):8s}, soundness error = 2^{log_snd}') 
+        print(f'{label_str}: communication = {pretty_size(self.comm):8s}, soundness error = 2^{log_snd_err}') 
         if not brief:
             print(f' ')
 
@@ -347,7 +347,7 @@ class Relation:
             # "log_beta_ext_2" : None,
             # "log_beta_ext_inf" : None,
             "comm" : self.ring.size_Rq() * (ell-1) * self.n_compress * self.rep,
-            # "snd" : 0
+            # "snd_err" : 0
         }
         cost = Cost(**cost_param)
         
@@ -372,7 +372,7 @@ class Relation:
             # "log_beta_ext_2" : None,
             # "log_beta_ext_inf" : None,
             "comm" : self.ring.size_Rq() * ((d-1) * self.n_commit + (d**2-1) * (self.n_compress-self.n_commit)) * self.rep,
-            "snd" : (d-1) / 2**(self.ring.log_q * self.ring.residue_deg)
+            "snd_err" : (d-1) / 2**(self.ring.log_q * self.ring.residue_deg)
         }
         cost = Cost(**cost_param)
         
@@ -401,7 +401,7 @@ class Relation:
             # "log_beta_ext_2" : None,
             # "log_beta_ext_inf" : None,
             # "comm" : 0,
-            "snd" : repin / (self.ring.C.cardinality**repout)
+            "snd_err" : repin / (self.ring.C.cardinality**repout)
         }
         cost = Cost(**cost_param)
         
@@ -423,7 +423,7 @@ class Relation:
             # "log_beta_ext_2" : None,
             # "log_beta_ext_inf" : None,
             # "comm" : 0,
-            "snd" : self.rep * self.n_rel / (2**(self.ring.log_q * self.ring.residue_deg))
+            "snd_err" : self.rep * self.n_rel / (2**(self.ring.log_q * self.ring.residue_deg))
         }
         cost = Cost(**cost_param)
         
@@ -450,7 +450,7 @@ class Relation:
             "log_beta_ext_2" : self.log_beta_wit_2, 
             "log_beta_ext_inf" : log(sqrt(self.ring.fhat * self.ring.phi * self.wdim * self.rep),2) + self.log_beta_wit_2, # TODO: is the self.rep factor needed? 
             "comm" : self.ring.size_Rq() * (ell * (self.ring.n_sis + self.n_rel) + 3 * self.rep + 3 * ell),
-            "snd" : 2 * self.wdim / (2**(self.ring.log_q * self.ring.residue_deg))
+            "snd_err" : 2 * self.wdim / (2**(self.ring.log_q * self.ring.residue_deg))
         }
         cost = Cost(**cost_param)
         
@@ -540,6 +540,6 @@ class Simulation:
         print(f' ')
         
         total_comm = sum([cost.comm for op, cost in self.costs])
-        total_snd = sum([cost.snd for op, cost in self.costs])
-        total_cost = Cost(comm=total_comm,snd=total_snd)
+        total_snd_err = sum([cost.snd_err for op, cost in self.costs])
+        total_cost = Cost(comm=total_comm,snd_err=total_snd_err)
         total_cost.show(label="Total Cost", brief=True)
