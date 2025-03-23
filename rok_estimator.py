@@ -189,12 +189,12 @@ class Cost:
         }
     sage: Cost(**cost_param)
     """
-    log_beta_ext_2_expansion          : float = 0             # norm expansion factor for canonical ell_2-norm after extraction
-    log_beta_ext_inf_expansion        : float = 0             # norm expansion factor for coefficient ell_inf-norm after extraction
-    log_beta_ext_2      : float | None = None   # set canonical ell_2-norm of extracted witness to this value
-    log_beta_ext_inf    : float | None = None   # set coefficient ell_inf-norm of extracted witness to this value
+    log_beta_ext_2_expansion    : float = 0             # norm expansion factor for canonical ell_2-norm after extraction
+    log_beta_ext_inf_expansion  : float = 0             # norm expansion factor for coefficient ell_inf-norm after extraction
+    log_beta_ext_2              : float | None = None   # set canonical ell_2-norm of extracted witness to this value
+    log_beta_ext_inf            : float | None = None   # set coefficient ell_inf-norm of extracted witness to this value
     comm    : int = 0              # communication cost
-    snd_err     : int = 0              # soundness cost
+    snd_err : int = 0              # soundness cost
     
     def show(self,label=None,brief=False):
         if self.snd_err == 0:
@@ -239,6 +239,7 @@ class Relation:
         if self.log_beta_wit_2 == None and self.log_beta_wit_inf == None:
             raise Exception("Relation must have either a canonical ell_2-norm bound or a coefficient ell_inf-norm bound.")
         if self.log_beta_wit_2 == None:
+            # self.log_beta_wit_2 = ceil(log(sqrt(self.wdim * self.rep * self.ring.phi * self.ring.fhat) * 2**self.log_beta_wit_inf,2)) # Measured in Frobenius norm
             self.log_beta_wit_2 = ceil(log(sqrt(self.wdim * self.ring.phi * self.ring.fhat) * 2**self.log_beta_wit_inf,2)) # Measured in max ell_2-norm over all columns
         if self.log_beta_wit_inf == None:
             self.log_beta_wit_inf = self.log_beta_wit_2 # If ell_inf-norm is not specified, trivially bound it by ell_2-norm 
@@ -248,8 +249,8 @@ class Relation:
     
     def show(self,label=None,brief=False):
         label_str = f'{label:8s}' if label else 'Relation'
-        flag_log_beta_wit_2 = f'*' if self.log_beta_wit_2 + 1 > self.ring.log_beta_sis_2 else ' ' # NOTE: Underestimating security when log_beta_wit_2 is measured in Frobenius norm 
-        flag_log_beta_ext_2 = f'*' if self.log_beta_ext_2 != None and self.log_beta_ext_2 + 1> self.ring.log_beta_sis_2 else ' ' # NOTE: Underestimating security when log_beta_ext_2 is measured in Frobenius norm 
+        flag_log_beta_wit_2 = f'*' if self.log_beta_wit_2 + 1 > self.ring.log_beta_sis_2 else ' '                                   # NOTE: Underestimating security when log_beta_wit_2 is measured in Frobenius norm 
+        flag_log_beta_ext_2 = f'*' if self.log_beta_ext_2 != None and self.log_beta_ext_2 + 1> self.ring.log_beta_sis_2 else ' '    # NOTE: Underestimating security when log_beta_ext_2 is measured in Frobenius norm 
         if self.trivial:
             print(f'{label_str}: True')
         elif brief:
@@ -309,10 +310,17 @@ class Relation:
         """
         rel = deepcopy(self)
         rel.trivial = True
-        comm = self.wit_size()
-        log_beta_ext_2 = self.log_beta_wit_2
-        log_beta_ext_inf = self.log_beta_wit_inf
-        cost = Cost(log_beta_ext_2=log_beta_ext_2,log_beta_ext_inf=log_beta_ext_inf,comm=comm)
+        
+        cost_param = {
+            # "log_beta_ext_2_expansion" : 0,
+            # "log_beta_ext_inf_expansion" : 0, 
+            "log_beta_ext_2" : self.log_beta_wit_2, 
+            "log_beta_ext_inf" : self.log_beta_wit_inf,
+            "comm" : self.wit_size(),
+            # "snd_err" : 0
+        }
+        cost = Cost(**cost_param)
+        
         return rel, cost
       
     def pi_bdecomp(self,base: int | None = None,ell: int | None = None):
@@ -398,7 +406,7 @@ class Relation:
         
         cost_param = {
             "log_beta_ext_2_expansion" : log(2 * sqrt(repin) * self.ring.C.theta_2,2),
-            "log_beta_ext_inf_expansion" : log(2 * sqrt(repin) * self.ring.C.theta_inf,2),
+            "log_beta_ext_inf_expansion" : log(2 * self.ring.C.theta_inf,2),
             # "log_beta_ext_2" : None,
             # "log_beta_ext_inf" : None,
             # "comm" : 0,
@@ -452,10 +460,10 @@ class Relation:
         cost_param = {
             # "log_beta_ext_2_expansion" : 0,
             # "log_beta_ext_inf_expansion" : 0, 
-            "log_beta_ext_2" : self.log_beta_wit_2, 
-            "log_beta_ext_inf" : log(sqrt(self.ring.fhat * self.ring.phi * self.wdim * self.rep),2) + self.log_beta_wit_2, # TODO: is the self.rep factor needed? 
-            "comm" : self.ring.size_Rq() * (ell * (self.ring.n_sis + self.n_rel) + 3 * self.rep + 3 * ell),
-            "snd_err" : 2 * self.wdim / (2**(self.ring.log_q * self.ring.residue_deg))
+            "log_beta_ext_2" :      self.log_beta_wit_2, 
+            "log_beta_ext_inf" :    log(sqrt(self.ring.fhat * self.ring.phi * self.wdim * self.rep),2) + self.log_beta_wit_2, # TODO: is the self.rep factor needed? 
+            "comm" :                self.ring.size_Rq() * (ell * (self.ring.n_sis + self.n_rel) + 3 * self.rep + 3 * ell),
+            "snd_err" :             2 * self.wdim / (2**(self.ring.log_q * self.ring.residue_deg))
         }
         cost = Cost(**cost_param)
         
