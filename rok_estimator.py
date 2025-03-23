@@ -484,10 +484,11 @@ class Relation:
         """
         Returns the relation resulting from the pi_norm RoK and its costs. 
         """
-        base = 2 * 2**self.log_beta_wit_inf + 1  # base = 2 * beta_wit_inf + 1
-        ell = ceil(log( self.ring.ring_exp_inf * self.wdim * 2**(self.log_beta_wit_inf * 2), base )) # ell >= log( ring_exp_inf * wdim * beta_wit_inf^2, base )
+        base = 2 * 2**self.log_beta_wit_inf + 1  
+        ell = ceil(log( self.ring.ring_exp_inf * self.wdim * 2**(self.log_beta_wit_inf * 2), base )) 
+        # base = 2 * beta_wit_inf + 1
+        # ell >= log( ring_exp_inf * wdim * beta_wit_inf^2, base ) so that base^ell >= ring_exp_inf * wdim * beta_wit_inf^2
         
-        beta_V_squared = ell * self.wdim * self.ring.fhat * 2**(self.log_beta_wit_inf*2) # TODO: Verify
         rel_params = {
             # "ring": self.ring,
             # "trivial": self.trivial,
@@ -496,9 +497,9 @@ class Relation:
             "n_rel": self.n_rel + 3,
             # "wdim": self.wdim,
             "rep": self.rep + ell,
-            # "log_beta_wit_2": log(sqrt( 2**(self.log_beta_wit_2*2) +  beta_V_squared ),2), # Measured in Frobenius norm
-            "log_beta_wit_2": max([self.log_beta_wit_2, log(sqrt( beta_V_squared ),2)]), # Measured in max ell_2-norm over all columns
-            "log_beta_wit_inf": max([self.log_beta_wit_inf, log(sqrt( beta_V_squared ),2)]) 
+            # "log_beta_wit_2": log(sqrt( (self.rep + ell) * self.ring.fhat * self.ring.phi ), 2) + self.log_beta_wit_inf, # Measured in Frobenius norm
+            "log_beta_wit_2": max([self.log_beta_wit_2, log(sqrt( self.ring.fhat * self.ring.phi ),2) + self.log_beta_wit_inf]), # Measured in max ell_2-norm over all columns
+            "log_beta_wit_inf": self.log_beta_wit_inf
         }
         cost_param = {
             # "log_beta_ext_2_expansion" : 0,
