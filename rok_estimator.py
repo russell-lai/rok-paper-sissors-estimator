@@ -404,7 +404,7 @@ class Relation:
 class Simulation:
     ring_params: dict = field(repr=False) # ring parameters
     rel_params: dict = field(repr=False) # relation parameters 
-    ops: List[Tuple[str, dict]] = field(repr=False) # sequence of operations
+    # ops: List[Tuple[str, dict]] = field(repr=False) # sequence of operations
     
     ring: RingParam = field(repr=False,init=False)      # ring parameters
     trace : List[Tuple[str, Relation]] = field(repr=False,init=False) # execution trace
@@ -413,64 +413,43 @@ class Simulation:
     def __post_init__(self):
         self.ring = RingParam(**self.ring_params)
         rel = Relation(ring = self.ring, **self.rel_params)
-        self.simulate(rel, self.ops)
+        self.trace = [("init", rel)]
+        self.costs = []
+        # self.simulate(self.ops)
     
-    def simulate(self,rel, ops):
+    
+    def execute(self, ops):
         """
         Simulates the execution of a sequence of RoKs on a relation.
-        
-        Example: 
-        sage: ring = RingParam(f=60,log_betasis=32,log_q=64)
-        sage: 
-        sage: rep = 2**5
-        sage: wdim = 2**15
-        sage: log_beta_wit_inf = 0
-        sage: log_beta_wit_2 = ceil(log(sqrt(wdim * ring.phi * ring.fhat) * 2**log_beta_wit_inf,2))
-        sage: 
-        sage: rel = Relation(ring=ring,wdim=wdim,rep=rep,log_beta_wit_inf=log_beta_wit_inf,log_beta_wit_2=log_beta_wit_2)
-        sage: 
-        sage: ell = 2
-        sage: d = 4
-        sage: 
-        sage: opener = [("norm", {}), ("batch", {}), ("split", {"d":d}), ("fold", {"repout":rep})]
-        sage: loop = [("bdecomp", {"ell":ell}), ("norm", {}), ("batch", {}), ("split", {"d":d}), ("fold", {"repout":rep})]
-        sage: ops = opener + loop + loop + opener + loop + [("finish", {})]
-        sage: 
-        sage: trace, costs = simulate(rel, ops)
         """
-        trace = [("init", rel)]
-        costs = []
-
         # Forward direction, a.k.a. "correctness direction"
         for op, params in ops:
-            new_rel, new_cost = trace[-1][1].execute(op, **params)
-            trace += [(op, new_rel)]
-            costs += [(op, new_cost)]
+            new_rel, new_cost = self.trace[-1][1].execute(op, **params)
+            self.trace += [(op, new_rel)]
+            self.costs += [(op, new_cost)]
             
+    def extract(self):
         # Backward direction, a.k.a. "extraction direction"        
-        if trace[-1][0] == "finish":
-            for i in range(len(costs)):
-                if costs[-i-1][1].log_beta_wit_2_extract is None:
-                    trace[-i-2][1].log_beta_wit_2_extract = costs[-i-1][1].log_beta_ext_2_exp + trace[-i-1][1].log_beta_wit_2_extract
+        if self.trace[-1][0] == "finish":
+            for i in range(len(self.costs)):
+                if self.costs[-i-1][1].log_beta_wit_2_extract is None:
+                    self.trace[-i-2][1].log_beta_wit_2_extract = self.costs[-i-1][1].log_beta_ext_2_exp + self.trace[-i-1][1].log_beta_wit_2_extract
                 else:
-                    trace[-i-2][1].log_beta_wit_2_extract = costs[-i-1][1].log_beta_wit_2_extract
+                    self.trace[-i-2][1].log_beta_wit_2_extract = self.costs[-i-1][1].log_beta_wit_2_extract
                 
-                if costs[-i-1][1].log_beta_wit_inf_extract is None:
-                    trace[-i-2][1].log_beta_wit_inf_extract = costs[-i-1][1].log_beta_ext_inf_exp + trace[-i-1][1].log_beta_wit_inf_extract
+                if self.costs[-i-1][1].log_beta_wit_inf_extract is None:
+                    self.trace[-i-2][1].log_beta_wit_inf_extract = self.costs[-i-1][1].log_beta_ext_inf_exp + self.trace[-i-1][1].log_beta_wit_inf_extract
                 else:
-                    trace[-i-2][1].log_beta_wit_inf_extract = costs[-i-1][1].log_beta_wit_inf_extract   
+                    self.trace[-i-2][1].log_beta_wit_inf_extract = self.costs[-i-1][1].log_beta_wit_inf_extract   
                     
                 # Check if any norm is overestimated. By https://eprint.iacr.org/2024/1972.pdf Corollary 1, 
-                if trace[-i-2][1].log_beta_wit_2_extract > log(sqrt(trace[-i-2][1].ring.fhat * trace[-i-2][1].ring.phi * trace[-i-2][1].wdim * trace[-i-2][1].rep),2) + trace[-i-2][1].log_beta_wit_inf_extract:
-                    trace[-i-2][1].log_beta_wit_2_extract = log(sqrt(trace[-i-2][1].ring.fhat * trace[-i-2][1].ring.phi * trace[-i-2][1].wdim * trace[-i-2][1].rep),2) + trace[-i-2][1].log_beta_wit_inf_extract
+                if self.trace[-i-2][1].log_beta_wit_2_extract > log(sqrt(self.trace[-i-2][1].ring.fhat * self.trace[-i-2][1].ring.phi * self.trace[-i-2][1].wdim * self.trace[-i-2][1].rep),2) + self.trace[-i-2][1].log_beta_wit_inf_extract:
+                    self.trace[-i-2][1].log_beta_wit_2_extract = log(sqrt(self.trace[-i-2][1].ring.fhat * self.trace[-i-2][1].ring.phi * self.trace[-i-2][1].wdim * self.trace[-i-2][1].rep),2) + self.trace[-i-2][1].log_beta_wit_inf_extract
                     # print(f"{trace[-i-2][0]}: ell-2 norm is overestimated!")
                     
-                if trace[-i-2][1].log_beta_wit_inf_extract > trace[-i-2][1].log_beta_wit_2_extract:
-                    trace[-i-2][1].log_beta_wit_inf_extract = trace[-i-2][1].log_beta_wit_2_extract
+                if self.trace[-i-2][1].log_beta_wit_inf_extract > self.trace[-i-2][1].log_beta_wit_2_extract:
+                    self.trace[-i-2][1].log_beta_wit_inf_extract = self.trace[-i-2][1].log_beta_wit_2_extract
                     # print(f"{trace[-i-2][0]}: ell-inf norm is overestimated!")
-                
-        self.trace = trace
-        self.costs = costs
         
     def show(self):
         self.ring.show()
