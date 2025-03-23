@@ -217,6 +217,19 @@ class Relation:
     sage: rel = Relation(ring=RingParam(f=60,n_sis=2),wdim=60)
     sage: rel_bdecomp, cost_bdecomp = rel.pi_bdecomp(ell=2)
     sage: rel_bdecomp.show()
+    sage:
+    sage: rel_params = {
+            "ring": rel.ring,
+            "trivial": rel.trivial,
+            "n_compress": rel.n_compress,
+            "n_commit": rel.n_commit,
+            "n_rel": rel.n_rel,
+            "wdim": rel.wdim,
+            "rep": rel.rep,
+            "log_beta_wit_2": rel.log_beta_wit_2,
+            "log_beta_wit_inf": rel.log_beta_wit_inf
+        }
+    sage: Relation(**rel_params)
     """
     ring: RingParam = field(repr=False)             # ring parameters
     trivial : bool = False                          # True if the relation is the "True" relation
