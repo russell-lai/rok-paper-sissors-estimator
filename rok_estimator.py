@@ -461,7 +461,7 @@ class Relation:
             # "log_beta_ext_2_expansion" : 0,
             # "log_beta_ext_inf_expansion" : 0, 
             "log_beta_ext_2" :      self.log_beta_wit_2, 
-            "log_beta_ext_inf" :    log(sqrt(self.ring.fhat * self.ring.phi * self.wdim * self.rep),2) + self.log_beta_wit_2, # TODO: is the self.wdim * self.rep factor needed? 
+            "log_beta_ext_inf" :    self.log_beta_wit_2, 
             "comm" :                self.ring.size_Rq() * (ell * (self.ring.n_sis + self.n_rel) + 3 * self.rep + 3 * ell),
             "snd_err" :             2 * self.wdim / (2**(self.ring.log_q * self.ring.residue_deg))
         }
@@ -566,4 +566,4 @@ class Simulation:
         total_snd_err = sum([cost.snd_err for op, cost in self.costs])
         total_cost = Cost(comm=total_comm,snd_err=total_snd_err)
         total_cost.show(label="Total Cost", brief=True)
-        print(f'Maximum log ell_2-norm (real | extr) = ({ceil(self.max_log_beta_ext_2):3d} | {ceil(self.max_log_beta_ext_inf):3d}), log SIS norm bound = {self.ring.log_beta_sis_2}')
+        print(f'Maximum log ell_2-norm (real | extr) = ({ceil(self.max_log_beta_wit_2):3d} | {ceil(self.max_log_beta_ext_2):3d}), log SIS norm bound = {self.ring.log_beta_sis_2}')
