@@ -264,7 +264,7 @@ class Relation:
             print(f'    Y: n_compress x rep')
             print(f'Witness:')
             print(f'    W: wdim x rep')
-            print(f'    ||sigma(W)||_2 <= 2^log_beta_wit_2')
+            print(f'    ||sigma(W)||_2 <= 2^log_beta_wit_2 measured in max column canonical ell_2-norm')
             print(f'    ||psi(W)||_inf <= 2^log_beta_wit_inf')
             print(f'Parameters:')
             print(f'    n_compress = {self.n_compress}, n_commit = {self.n_commit}, n_rel = {self.n_rel}')
