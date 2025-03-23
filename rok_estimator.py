@@ -348,7 +348,7 @@ class Relation:
         rel.wdim    = ZZ(self.wdim / d)
         rel.rep     = self.rep * d
         
-        comm    = self.ring.size_Rq() * ((d - 1) * self.n_commit + (d**2 - 1) * self.n_rel) * self.rep  ## TODO: Check
+        comm    = self.ring.size_Rq() * ((d - 1) * self.n_commit + (d**2 - 1) * (self.n_compress - self.n_commit)) * self.rep
         snd     = (d-1) / 2**(self.ring.log_q * self.ring.residue_deg)
         cost = Cost(comm=comm,snd=snd)
         
