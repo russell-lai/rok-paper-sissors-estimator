@@ -461,7 +461,7 @@ class Relation:
             # "log_beta_ext_2_expansion" : 0,
             # "log_beta_ext_inf_expansion" : 0, 
             "log_beta_ext_2" :      self.log_beta_wit_2, 
-            "log_beta_ext_inf" :    log(sqrt(self.ring.fhat * self.ring.phi * self.wdim * self.rep),2) + self.log_beta_wit_2, # TODO: is the self.rep factor needed? 
+            "log_beta_ext_inf" :    log(sqrt(self.ring.fhat * self.ring.phi * self.wdim * self.rep),2) + self.log_beta_wit_2, # TODO: is the self.wdim * self.rep factor needed? 
             "comm" :                self.ring.size_Rq() * (ell * (self.ring.n_sis + self.n_rel) + 3 * self.rep + 3 * ell),
             "snd_err" :             2 * self.wdim / (2**(self.ring.log_q * self.ring.residue_deg))
         }
