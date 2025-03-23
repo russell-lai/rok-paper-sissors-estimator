@@ -114,9 +114,11 @@ class RingParam:
     residue_deg: int | None = None              # inertia degree of q, i.e. R_q splits into fields of cardinality q**residue_deg 
     C: InitVar[SubtractiveSet | None] = None    # subtractive set parameters
     ring_exp_inf: float = field(init=False)     # ring expansion factor in coefficient ell_inf-norm
-    n_sis: int | None = None                     # module rank of SIS instance
-    secpar: int | None = 128                    # target/estimated SIS security
-    kappa: int | None = 80                      # target/estimated Schwartz-Zippel security
+    n_sis: int | None = None                    # module rank of SIS instance
+    secpar_target: int = 128                    # target SIS security
+    secpar_result: int | None = None            # resulting SIS security
+    kappa_target: int = 80                      # target Schwartz-Zippel security
+    kappa_result: int | None = None             # resulting Schwartz-Zippel security
 
     def __post_init__(self, C):
         if mod(self.f,4) == 2:
@@ -126,10 +128,10 @@ class RingParam:
         self.phi = euler_phi(self.f)
         self.ring_exp_inf = euler_phi(self.f)
         if self.C == None:
-            self.C = SubtractiveSet.gen_klno24_cyclotomic(self.f)   # Use the subtractive set construction for cyclotomic fields reported in KLNO24
+            self.C = SubtractiveSet.gen_klno24_cyclotomic(self.f)       # Use the subtractive set construction for cyclotomic fields reported in KLNO24
         if self.residue_deg == None:
-            self.residue_deg = ceil(self.kappa/self.log_q)        # Aim for kappa bits of soundness for Schwartz-Zippel
-            self.kappa = self.log_q * self.residue_deg
+            self.residue_deg = ceil(self.kappa_target/self.log_q)       # Aim for kappa_target bits of soundness for Schwartz-Zippel
+            self.kappa_result = self.log_q * self.residue_deg
         if is_even(self.f):
             self.fhat = self.f/2
         else:
@@ -144,9 +146,9 @@ class RingParam:
                 with HiddenPrints():
                     costs = estimator.SIS.estimate(sis) # BUG: seems that estimator.SIS.estimate returns +Infinity when security is too low
                 sec = min(cost["rop"] for cost in costs.values())
-                if sec < oo and sec >= 2**self.secpar:    
+                if sec < oo and sec >= 2**self.secpar_target:    
                     self.n_sis = n_sis
-                    self.secpar = floor(log(sec,2))
+                    self.secpar_result = floor(log(sec,2))
                     break
             if self.n_sis == None:
                 raise Exception("All SIS module rank considered are too small for the target security level.")
@@ -155,7 +157,7 @@ class RingParam:
             with HiddenPrints():
                 costs = estimator.SIS.estimate(sis)
             sec = min(cost["rop"] for cost in costs.values())
-            if sec < 2**self.secpar:
+            if sec < 2**self.secpar_target:
                 warnings.warn("Specified module rank for SIS is too small for the target security level.")
                 # raise Exception("Specified module rank for SIS is too small for the target security level.")
 
@@ -165,8 +167,8 @@ class RingParam:
     def show(self):
         print("Ring parameters:")
         print(f"    conductor f: {self.f}, degree phi: {self.phi}, modulus q: 2^{self.log_q}, beta_sis_2: 2^{self.log_beta_sis_2}")
-        print(f"    SIS module rank n_sis: {self.n_sis}, SIS security secpar: {self.secpar}")
-        print(f"    residue degree: {self.residue_deg}, Schwartz-Zippel security kappa: {self.kappa}")
+        print(f"    SIS module rank n_sis: {self.n_sis}, target SIS security: {self.secpar_target}, resulting SIS security: {self.secpar_result}")
+        print(f"    residue degree: {self.residue_deg}, target Schwartz-Zippel security: {self.kappa_target}, resulting Schwartz-Zippel security: {self.kappa_result}")
         print(f"    |R_q| = {pretty_size(self.size_Rq())}, |R_q^(n_sis)| = {pretty_size(self.size_Rq()*self.n_sis)}")
         print(f' ')
         self.C.show()
@@ -229,9 +231,9 @@ class Relation:
         if self.log_beta_wit_2 == None and self.log_beta_wit_inf == None:
             raise Exception("Relation must have either a canonical ell_2-norm bound or a coefficient ell_inf-norm bound.")
         if self.log_beta_wit_2 == None:
-            self.log_beta_wit_2 = ceil(log(sqrt(self.wdim * self.ring.phi * self.ring.fhat) * 2**self.log_beta_wit_inf,2))
+            self.log_beta_wit_2 = ceil(log(sqrt(self.wdim * self.ring.phi * self.ring.fhat) * 2**self.log_beta_wit_inf,2)) # Measured in max ell_2-norm over all columns
         if self.log_beta_wit_inf == None:
-            self.log_beta_wit_inf = self.log_beta_wit_2
+            self.log_beta_wit_inf = self.log_beta_wit_2 # If ell_inf-norm is not specified, trivially bound it by ell_2-norm 
         
     def wit_size(self):
         return self.wdim * self.rep * self.ring.phi * ceil(self.log_beta_wit_inf + 1)
@@ -327,7 +329,8 @@ class Relation:
             
         rel = deepcopy(self)
         rel.rep = self.rep * ell
-        rel.log_beta_wit_2      = log(sqrt(ell * self.rep * self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2)
+        rel.log_beta_wit_2      = log(sqrt(ell * self.rep * self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2) # measured in Frobenius norm
+        # rel.log_beta_wit_2      = log(sqrt(self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2) # measured in max ell_2-norm over all columns
         rel.log_beta_wit_inf    = log(floor(base / 2),2)
         
         log_beta_ext_2_expansion      = log((base**ell-1)/(base-1),2)
@@ -359,17 +362,22 @@ class Relation:
         
         return rel, cost
     
-    def pi_fold(self,repout: int):
+    def pi_fold(self, repout: int | None = None):
         """
         Returns the relation resulting from the pi_fold RoK and its costs. 
+        
+        Fold witness matrix W and challenge matrix C into W' = W * C. 
         
         Parameters: Output bundle size 'repout'.
         """
         rel = deepcopy(self)
         repin                   = self.rep
+        if repout == None:
+            # Ensure that repin / (self.ring.C.cardinality**repout) <= 2^-kappa_target  
+            repout = ceil((self.ring.kappa_target + log(repin,2)) / log(self.ring.C.cardinality,2))
         rel.rep                 = repout
-        rel.log_beta_wit_2      = log(sqrt(repout) * repin * self.ring.C.gamma_2,2) + self.log_beta_wit_2
-        rel.log_beta_wit_inf    = log(sqrt(repout) * repin * self.ring.C.gamma_inf,2) + self.log_beta_wit_inf
+        rel.log_beta_wit_2      = log(sqrt(repout) * repin * self.ring.C.gamma_2,2) + self.log_beta_wit_2 # Measured in Frobenius norm
+        rel.log_beta_wit_inf    = log(sqrt(repout) * repin * self.ring.C.gamma_inf,2) + self.log_beta_wit_inf # TODO: Why is there a factor of repout?
         
         log_beta_ext_2_expansion      = log(2 * sqrt(repin) * self.ring.C.theta_2,2)
         log_beta_ext_inf_expansion    = log(2 * sqrt(repin) * self.ring.C.theta_inf,2)
