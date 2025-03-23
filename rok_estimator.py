@@ -248,8 +248,8 @@ class Relation:
     
     def show(self,label=None,brief=False):
         label_str = f'{label:8s}' if label else 'Relation'
-        flag_log_beta_wit_2 = f'*' if self.log_beta_wit_2 + 1 > self.ring.log_beta_sis_2 else ' ' # TODO: This seems to be underestimating security since log_beta_wit_2 is measuring Frobenius norm 
-        flag_log_beta_ext_2 = f'*' if self.log_beta_ext_2 != None and self.log_beta_ext_2 + 1> self.ring.log_beta_sis_2 else ' ' # TODO: This seems to be underestimating security since log_beta_ext_2 is measuring Frobenius norm 
+        flag_log_beta_wit_2 = f'*' if self.log_beta_wit_2 + 1 > self.ring.log_beta_sis_2 else ' ' # NOTE: Underestimating security when log_beta_wit_2 is measured in Frobenius norm 
+        flag_log_beta_ext_2 = f'*' if self.log_beta_ext_2 != None and self.log_beta_ext_2 + 1> self.ring.log_beta_sis_2 else ' ' # NOTE: Underestimating security when log_beta_ext_2 is measured in Frobenius norm 
         if self.trivial:
             print(f'{label_str}: True')
         elif brief:
@@ -337,8 +337,8 @@ class Relation:
             
         rel = deepcopy(self)
         rel.rep = self.rep * ell
-        rel.log_beta_wit_2      = log(sqrt(ell * self.rep * self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2) # measured in Frobenius norm
-        # rel.log_beta_wit_2      = log(sqrt(self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2) # measured in max ell_2-norm over all columns
+        # rel.log_beta_wit_2      = log(sqrt(ell * self.rep * self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2) # measured in Frobenius norm
+        rel.log_beta_wit_2      = log(sqrt(self.wdim * self.ring.fhat * self.ring.phi) * base / 2,2) # measured in max ell_2-norm over all columns
         rel.log_beta_wit_inf    = log(floor(base / 2),2)
         
         cost_param = {
@@ -392,8 +392,9 @@ class Relation:
             # Ensure that repin / (self.ring.C.cardinality**repout) <= 2^-kappa_target  
             repout = ceil((self.ring.kappa_target + log(repin,2)) / log(self.ring.C.cardinality,2))
         rel.rep                 = repout
-        rel.log_beta_wit_2      = log(sqrt(repout) * repin * self.ring.C.gamma_2,2) + self.log_beta_wit_2 # Measured in Frobenius norm
-        rel.log_beta_wit_inf    = log(sqrt(repout) * repin * self.ring.C.gamma_inf,2) + self.log_beta_wit_inf # TODO: Why is there a factor of repout?
+        # rel.log_beta_wit_2      = log(sqrt(repout) * repin * self.ring.C.gamma_2,2) + self.log_beta_wit_2 # Measured in Frobenius norm
+        rel.log_beta_wit_2      = log(repin * self.ring.C.gamma_2,2) + self.log_beta_wit_2 # Measured in max ell_2-norm over all columns
+        rel.log_beta_wit_inf    = log(repin * self.ring.C.gamma_inf,2) + self.log_beta_wit_inf 
         
         cost_param = {
             "log_beta_ext_2_expansion" : log(2 * sqrt(repin) * self.ring.C.theta_2,2),
@@ -434,15 +435,18 @@ class Relation:
         Returns the relation resulting from the pi_norm RoK and its costs. 
         """
         
-        base = 2 * 2**self.log_beta_wit_inf + 1
-        ell = ceil(log( self.ring.ring_exp_inf * self.wdim * 2**(self.log_beta_wit_inf * 2), base ))
+        base = 2 * 2**self.log_beta_wit_inf + 1  # base = 2 * beta_wit_inf + 1
+        ell = ceil(log( self.ring.ring_exp_inf * self.wdim * 2**(self.log_beta_wit_inf * 2), base )) # ell >= log( ring_exp_inf * wdim * beta_wit_inf^2, base )
         
         rel = deepcopy(self)
         rel.n_compress            = self.n_compress + 3
         rel.n_rel            = self.n_rel + 3
         rel.rep             = self.rep + ell
-        rel.log_beta_wit_2  = log(sqrt( 2**(self.log_beta_wit_2*2) +  ell * self.wdim * self.ring.fhat * 2**(self.log_beta_wit_inf*2) ),2) # Measured in Frobenius norm?
-        rel.log_beta_wit_inf = max([rel.log_beta_wit_inf, log(sqrt( ell * self.wdim * self.ring.fhat * 2**(self.log_beta_wit_inf*2) ),2)]) # TODO: Verify
+        
+        beta_V_squared = ell * self.wdim * self.ring.fhat * 2**(self.log_beta_wit_inf*2) # TODO: Verify
+        # rel.log_beta_wit_2  = log(sqrt( 2**(self.log_beta_wit_2*2) +  beta_V_squared ),2) # Measured in Frobenius norm
+        rel.log_beta_wit_2  = max([self.log_beta_wit_2, log(sqrt( beta_V_squared ),2)]) # Measured in max ell_2-norm over all columns
+        rel.log_beta_wit_inf = max([self.log_beta_wit_inf, log(sqrt( beta_V_squared ),2)]) 
 
         cost_param = {
             # "log_beta_ext_2_expansion" : 0,
