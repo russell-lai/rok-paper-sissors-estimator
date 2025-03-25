@@ -89,6 +89,9 @@ class SubtractiveSet:
         """
         if mod(f,4) == 2:
             raise Exception("Conductor f cannot be congruent to 2 modulo 4.")
+        # Hard-code values for empirically verified rings
+        if f == 60:
+            return SubtractiveSet(cardinality = 12, gamma_2 = 1, theta_2 = f/(4*sqrt(2)), gamma_inf = 4, theta_inf = 17)
         if is_prime_power(f):
             if f <= 4:
                 raise Exception("Conductor f <= 4 is not supported.")
