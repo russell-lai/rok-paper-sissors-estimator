@@ -195,17 +195,15 @@ class Cost:
     sage: cost_param = {
             # "log_beta_ext_2_expansion" : 0,
             # "log_beta_ext_inf_expansion" : 0, 
-            # "log_beta_ext_2" : None, 
-            # "log_beta_ext_inf" : None,
+            # "log_beta_ext_2_func" : lambda x : x, 
+            # "log_beta_ext_inf_func" : lambda x : x,
             # "comm" : 0,
             # "snd_err" : 0
         }
     sage: Cost(**cost_param)
     """
-    log_beta_ext_2_expansion    : float = 0             # norm expansion factor for canonical ell_2-norm after extraction
-    log_beta_ext_inf_expansion  : float = 0             # norm expansion factor for coefficient ell_inf-norm after extraction
-    log_beta_ext_2              : float | None = None   # set canonical ell_2-norm of extracted witness to this value
-    log_beta_ext_inf            : float | None = None   # set coefficient ell_inf-norm of extracted witness to this value
+    log_beta_ext_2_func     : function = lambda x : x   # function mapping old canonical ell_2-norm of extracted witness to new one 
+    log_beta_ext_inf_func   : function = lambda x : x   # function mapping old coefficient ell_inf-norm of extracted witness to new one
     comm    : int = 0              # communication cost
     snd_err : int = 0              # soundness cost
     
@@ -214,7 +212,6 @@ class Cost:
             log_snd_err = -oo
         else:
             log_snd_err = floor(log(self.snd_err,2))
-        
         
         label_str = f'{label:8s}' if label else 'Cost'
         print(f'{label_str}: communication = {pretty_size(self.comm):8s}, soundness error = 2^{log_snd_err}') 
@@ -281,7 +278,7 @@ class Relation:
         if self.trivial:
             print(f'{label_str}: True')
         elif brief:
-            print(f'{label_str}: wdim = {self.wdim:8d}, rep = {self.rep:3d}, log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2):3d}{flag_log_beta_wit_2} | {ceil(self.log_beta_ext_2):3d}{flag_log_beta_ext_2}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf):3d} | {ceil(self.log_beta_ext_inf):3d}), wit size = {pretty_size(self.wit_size()):8s}')
+            print(f'{label_str}: wdim = {self.wdim:8d}, rep = {self.rep:3d}, log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2):3d}{flag_log_beta_wit_2}|{ceil(self.log_beta_ext_2):3d}{flag_log_beta_ext_2}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf):3d} |{ceil(self.log_beta_ext_inf):3d} ), wit size = {pretty_size(self.wit_size()):8s}')
         else:
             print(f'Relation:')
             print(f'    H * F * W = Y')
@@ -296,7 +293,7 @@ class Relation:
             print(f'Parameters:')
             print(f'    n_compress = {self.n_compress}, n_commit = {self.n_commit}, n_rel = {self.n_rel}')
             print(f'    wdim = {self.wdim}, rep = {self.rep}')
-            print(f'    log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2)}{flag_log_beta_wit_2} | {ceil(self.log_beta_ext_2)}{flag_log_beta_ext_2}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf)} | {ceil(self.log_beta_ext_inf)})')
+            print(f'    log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2)}{flag_log_beta_wit_2}|{ceil(self.log_beta_ext_2)}{flag_log_beta_ext_2}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf)}|{ceil(self.log_beta_ext_inf)})')
             print(f'    wit size = {pretty_size(self.wit_size()):8s}')
             print(f' ')
             
@@ -347,10 +344,8 @@ class Relation:
             # "log_beta_wit_inf": self.log_beta_wit_inf
         }
         cost_param = {
-            # "log_beta_ext_2_expansion" : 0,
-            # "log_beta_ext_inf_expansion" : 0, 
-            "log_beta_ext_2" : self.log_beta_wit_2, 
-            "log_beta_ext_inf" : self.log_beta_wit_inf,
+            "log_beta_ext_2_func" : lambda x : self.log_beta_wit_2, # perfect extraction
+            "log_beta_ext_inf_func" : lambda x : self.log_beta_wit_inf, # perfect extraction
             "comm" : self.wit_size(),
             # "snd_err" : 0
         }
@@ -388,10 +383,8 @@ class Relation:
             "log_beta_wit_inf" : log(floor(base / 2),2),
         }        
         cost_param = {
-            "log_beta_ext_2_expansion" : log((base**ell-1)/(base-1),2),
-            "log_beta_ext_inf_expansion" : log((base**ell-1)/(base-1),2),
-            # "log_beta_ext_2" : None,
-            # "log_beta_ext_inf" : None,
+            "log_beta_ext_2_func" : lambda x : x + log((base**ell-1)/(base-1),2),
+            "log_beta_ext_inf_func" : lambda x : x + log((base**ell-1)/(base-1),2),
             "comm" : self.ring.size_Rq() * (ell-1) * self.n_compress * self.rep,
             # "snd_err" : 0
         }
@@ -418,10 +411,8 @@ class Relation:
             # "log_beta_wit_inf": self.log_beta_wit_inf
         }        
         cost_param = {
-            # "log_beta_ext_2_expansion" : 0,
-            # "log_beta_ext_inf_expansion" : 0,
-            # "log_beta_ext_2" : None,
-            # "log_beta_ext_inf" : None,
+            # "log_beta_ext_2_func" : lambda x : x,
+            # "log_beta_ext_inf_func" : lambda x : x,
             "comm" : self.ring.size_Rq() * ((d-1) * self.n_commit + (d**2-1) * (self.n_compress-self.n_commit)) * self.rep,
             "snd_err" : (d-1) / 2**(self.ring.log_q * self.ring.residue_deg)
         }
@@ -453,10 +444,8 @@ class Relation:
             "log_beta_wit_inf": log(repin * self.ring.C.gamma_inf,2) + self.log_beta_wit_inf 
         }
         cost_param = {
-            "log_beta_ext_2_expansion" : log(2 * sqrt(repin) * self.ring.C.theta_2,2),
-            "log_beta_ext_inf_expansion" : log(2 * self.ring.C.theta_inf,2),
-            # "log_beta_ext_2" : None,
-            # "log_beta_ext_inf" : None,
+            "log_beta_ext_2_func" : lambda x : x + log(2 * sqrt(repin) * self.ring.C.theta_2,2),
+            "log_beta_ext_inf_func" : lambda x : x + log(2 * self.ring.C.theta_inf,2),
             # "comm" : 0,
             "snd_err" : repin / (self.ring.C.cardinality**repout)
         }        
@@ -481,10 +470,8 @@ class Relation:
                 # "log_beta_wit_inf": self.log_beta_wit_inf
             }
             cost_param = {
-                # "log_beta_ext_2_expansion" : 0,
-                # "log_beta_ext_inf_expansion" : 0,
-                # "log_beta_ext_2" : None,
-                # "log_beta_ext_inf" : None,
+                # "log_beta_ext_2_func" : lambda x : x,
+                # "log_beta_ext_inf_func" : lambda x : x,
                 # "comm" : 0,
                 "snd_err" : self.rep * self.n_rel / (2**(self.ring.log_q * self.ring.residue_deg))
             }
@@ -514,10 +501,8 @@ class Relation:
             "log_beta_wit_inf": self.log_beta_wit_inf
         }
         cost_param = {
-            # "log_beta_ext_2_expansion" : 0,
-            # "log_beta_ext_inf_expansion" : 0, 
-            "log_beta_ext_2" :      self.log_beta_wit_2, 
-            "log_beta_ext_inf" :    self.log_beta_wit_2, 
+            "log_beta_ext_2_func" : lambda x : self.log_beta_wit_2, # perfect extraction
+            "log_beta_ext_inf_func" : lambda x : bound_coeff_inf_from_canon_2(self.log_beta_wit_2), # extraction of ell_2-norm is perfect, then bound ell_inf-norm by norm conversion
             "comm" :                self.ring.size_Rq() * (ell * (self.ring.n_sis + self.n_rel) + 3 * self.rep + 3 * ell),
             "snd_err" :             2 * self.wdim / (2**(self.ring.log_q * self.ring.residue_deg))
         }        
@@ -575,35 +560,31 @@ class Simulation:
         # Backward direction, a.k.a. "extraction direction"        
         if self.trace[-1][0] == "finish":
             for i in range(len(self.costs)):
-                if self.costs[-i-1][1].log_beta_ext_2 is None:
-                    self.trace[-i-2][1].log_beta_ext_2 = self.costs[-i-1][1].log_beta_ext_2_expansion + self.trace[-i-1][1].log_beta_ext_2
-                else:
-                    self.trace[-i-2][1].log_beta_ext_2 = self.costs[-i-1][1].log_beta_ext_2
-                
-                if self.costs[-i-1][1].log_beta_ext_inf is None:
-                    self.trace[-i-2][1].log_beta_ext_inf = self.costs[-i-1][1].log_beta_ext_inf_expansion + self.trace[-i-1][1].log_beta_ext_inf
-                else:
-                    self.trace[-i-2][1].log_beta_ext_inf = self.costs[-i-1][1].log_beta_ext_inf   
+                # The RoK is from `rel_src` to `rel_tgt` with cost `cost`.
+                rel_tgt = self.trace[-i-1][1]
+                rel_src = self.trace[-i-2][1]
+                cost = self.costs[-i-1][1] 
+
+                rel_src.log_beta_ext_2 = cost.log_beta_ext_2_func(rel_tgt.log_beta_ext_2)   
+                rel_src.log_beta_ext_inf = cost.log_beta_ext_inf_func(rel_tgt.log_beta_ext_inf) 
                     
                 # Check if any norm is overestimated. 
-                ring = self.trace[-i-2][1].ring
-                wdim = self.trace[-i-2][1].wdim
-                rep = self.trace[-i-2][1].rep
-                log_beta_ext_2 = self.trace[-i-2][1].log_beta_ext_2
-                log_beta_ext_inf = self.trace[-i-2][1].log_beta_ext_inf
-                if log_beta_ext_2 > bound_log_canon_2_from_log_coeff_inf(ring, log_beta_ext_inf, dim=wdim * rep):
-                    self.trace[-i-2][1].log_beta_ext_2 = bound_log_canon_2_from_log_coeff_inf(ring, log_beta_ext_inf, dim=wdim * rep)
+                ring = rel_src.ring
+                wdim = rel_src.wdim
+                rep = rel_src.rep
+                if rel_src.log_beta_ext_2 > bound_log_canon_2_from_log_coeff_inf(ring, rel_src.log_beta_ext_inf, dim=wdim * rep):
+                    rel_src.log_beta_ext_2 = bound_log_canon_2_from_log_coeff_inf(ring, rel_src.log_beta_ext_inf, dim=wdim * rep)
                     # print(f"{self.trace[-i-2][0]}: ell-2 norm is overestimated!")
                     
-                if log_beta_ext_inf > bound_log_coeff_inf_from_log_canon_2(log_beta_ext_inf):
-                    self.trace[-i-2][1].log_beta_ext_inf = bound_log_coeff_inf_from_log_canon_2(log_beta_ext_inf)
+                if rel_src.log_beta_ext_inf > bound_log_coeff_inf_from_log_canon_2(rel_src.log_beta_ext_2):
+                    rel_src.log_beta_ext_inf = bound_log_coeff_inf_from_log_canon_2(rel_src.log_beta_ext_2)
                     # print(f"{self.trace[-i-2][0]}: ell-inf norm is overestimated!")
                     
                 # Record maximum log_beta_ext_2 and log_beta_ext_inf
-                if self.trace[-i-2][1].log_beta_ext_2 > self.max_log_beta_ext_2:
-                    self.max_log_beta_ext_2 = self.trace[-i-2][1].log_beta_ext_2
-                if self.trace[-i-2][1].log_beta_ext_inf > self.max_log_beta_ext_inf:
-                    self.max_log_beta_ext_inf = self.trace[-i-2][1].log_beta_ext_inf
+                if rel_src.log_beta_ext_2 > self.max_log_beta_ext_2:
+                    self.max_log_beta_ext_2 = rel_src.log_beta_ext_2
+                if rel_src.log_beta_ext_inf > self.max_log_beta_ext_inf:
+                    self.max_log_beta_ext_inf = rel_src.log_beta_ext_inf
         
     def show(self,brief=False):
         self.ring.show()
@@ -626,4 +607,6 @@ class Simulation:
         total_snd_err = sum([cost.snd_err for op, cost in self.costs])
         total_cost = Cost(comm=total_comm,snd_err=total_snd_err)
         total_cost.show(label="Total Cost", brief=True)
-        print(f'Maximum log ell_2-norm (real | extr) = ({ceil(self.max_log_beta_wit_2):3d} | {ceil(self.max_log_beta_ext_2):3d}), log SIS norm bound = {self.ring.log_beta_sis_2}')
+        flag_log_beta_wit_2 = f'*' if self.max_log_beta_wit_2 + 1 > self.ring.log_beta_sis_2 else ' '                                   # NOTE: Underestimating security when log_beta_wit_2 is measured in Frobenius norm 
+        flag_log_beta_ext_2 = f'*' if self.max_log_beta_ext_2 != None and self.max_log_beta_ext_2 + 1> self.ring.log_beta_sis_2 else ' '    # NOTE: Underestimating security when log_beta_ext_2 is measured in Frobenius norm 
+        print(f'Maximum log ell_2-norm (real | extr) = ({ceil(self.max_log_beta_wit_2):3d}{flag_log_beta_wit_2}|{ceil(self.max_log_beta_ext_2):3d}{flag_log_beta_ext_2}), log SIS norm bound = {self.ring.log_beta_sis_2}')
