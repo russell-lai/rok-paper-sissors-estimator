@@ -58,6 +58,12 @@ class Protocol:
             # note that ext_expansion_2 is of the form either [e,0] or [0,1].
             # In the first case, the extracted norm is e times that of the next round witness.
             # In the second case, the extracted norm is reset to beta_wit_2
+
+            if history[j-1].op == "norm":
+                left = history[j].beta_ext_inf ** 2 * self.ring_param["ring_exp_inf"] * history[j].wit_rdim 
+                right = self.ring_param["q"]
+                if left < right:
+                    print("condition for q failed: ",left, right)
             
             history[j-1].update_readable()
             if 2 * history[j-1].beta_ext_2 > 2**history[j-1].sis_param["log_beta_sis"]:
