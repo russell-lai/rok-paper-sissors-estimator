@@ -135,6 +135,7 @@ class RingParam:
     secpar_result: int | None = None            # resulting SIS security
     kappa_target: int = 80                      # target Schwartz-Zippel security
     kappa_result: int | None = None             # resulting Schwartz-Zippel security
+    kappa_hedge: int = 3                       # hedge against running the RoKs 2**kappa_hedge times
 
     def __post_init__(self, C):
         if mod(self.f,4) == 2:
@@ -146,7 +147,7 @@ class RingParam:
         if self.C == None:
             self.C = SubtractiveSet.gen_klno24_cyclotomic(self.f)       # Use the subtractive set construction for cyclotomic fields reported in KLNO24
         if self.residue_deg == None:
-            self.residue_deg = ceil(self.kappa_target/self.log_q)       # Aim for kappa_target bits of soundness for Schwartz-Zippel
+            self.residue_deg = ceil((self.kappa_target + self.kappa_hedge)/self.log_q)       # Aim for kappa_target bits of soundness for Schwartz-Zippel. Adding kappa_hedge bits to hedge against running the RoKs 2**kappa_hedge times
             self.kappa_result = self.log_q * self.residue_deg
         if is_even(self.f):
             self.fhat = self.f/2
@@ -432,7 +433,7 @@ class Relation:
         repin = self.rep
         if repout == None:
             # Ensure that repin / (self.ring.C.cardinality**repout) <= 2^-kappa_target  
-            repout = ceil((self.ring.kappa_target + log(repin,2)) / log(self.ring.C.cardinality,2))
+            repout = ceil((self.ring.kappa_target + log(repin,2) + self.ring.kappa_hedge) / log(self.ring.C.cardinality,2)) # +kappa_hedge hedges against running the RoK 2**kappa_hedge times
         
         rel_params = {
             # "ring": self.ring,
