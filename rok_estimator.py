@@ -90,8 +90,11 @@ class SubtractiveSet:
         if mod(f,4) == 2:
             raise Exception("Conductor f cannot be congruent to 2 modulo 4.")
         # Hard-code values for empirically verified rings
+        if f == 24:
+            return SubtractiveSet(cardinality = 3, gamma_2 = 1, theta_2 = f/(4*sqrt(2)), gamma_inf = 2, theta_inf = 7)
         if f == 60:
             return SubtractiveSet(cardinality = 12, gamma_2 = 1, theta_2 = f/(4*sqrt(2)), gamma_inf = 4, theta_inf = 17)
+        # General case
         if is_prime_power(f):
             if f <= 4:
                 raise Exception("Conductor f <= 4 is not supported.")
@@ -595,6 +598,17 @@ class Simulation:
                     self.max_log_beta_ext_2 = rel_src.log_beta_ext_2
                 if rel_src.log_beta_ext_inf > self.max_log_beta_ext_inf:
                     self.max_log_beta_ext_inf = rel_src.log_beta_ext_inf
+    
+    def show_trace_cost(self,brief=False):
+        print(f'Execution Trace:')
+        for op, rel in self.trace:
+            rel.show(label=op,brief=True)
+        print(f' ')
+            
+        print(f'Costs:')
+        for op, cost in self.costs:
+            cost.show(label=op,brief=True)
+        print(f' ')
         
     def show(self,brief=False):
         self.ring.show()
@@ -603,15 +617,7 @@ class Simulation:
         self.trace[0][1].show(brief=brief)
         
         if not brief:
-            print(f'Execution Trace:')
-            for op, rel in self.trace:
-                rel.show(label=op,brief=True)
-            print(f' ')
-                
-            print(f'Costs:')
-            for op, cost in self.costs:
-                cost.show(label=op,brief=True)
-            print(f' ')
+            self.show_trace_cost(brief=brief)
         
         total_comm = sum([cost.comm for op, cost in self.costs])
         total_snd_err = sum([cost.snd_err for op, cost in self.costs])
