@@ -533,6 +533,7 @@ class Simulation:
     max_log_beta_wit_inf : int = 0         # maximum log_beta_wit_inf
     max_log_beta_ext_2 : int = 0           # maximum log_beta_ext_2
     max_log_beta_ext_inf : int = 0         # maximum log_beta_ext_inf
+    error_log : List[str] = field(repr=False,init=False) # error log
     
     def __post_init__(self):
         self.ring = RingParam(**self.ring_params)
@@ -541,6 +542,7 @@ class Simulation:
         self.costs = []
         self.max_log_beta_wit_2 = rel.log_beta_wit_2
         self.max_log_beta_wit_inf = rel.log_beta_wit_inf
+        self.error_log = []
     
     def execute(self, ops):
         """
@@ -564,9 +566,13 @@ class Simulation:
                 rel_tgt = self.trace[-i-1][1]
                 rel_src = self.trace[-i-2][1]
                 cost = self.costs[-i-1][1] 
-
+            
                 rel_src.log_beta_ext_2 = cost.log_beta_ext_2_func(rel_tgt.log_beta_ext_2)   
                 rel_src.log_beta_ext_inf = cost.log_beta_ext_inf_func(rel_tgt.log_beta_ext_inf) 
+                
+                if self.costs[-i-1][0] == "norm":
+                    if rel_src.ring.log_q - 1 <= rel_src.log_beta_ext_inf * 2 + log(rel_src.ring.ring_exp_inf,2) + log(rel_src.wdim,2):
+                        self.error_log += [f"Extraction failure for pi_norm: The norm of the square of the extracted witness is 2^{ceil(rel_src.log_beta_ext_inf * 2 + log(rel_src.ring.ring_exp_inf,2) + log(rel_src.wdim,2))} overflowing modulo q."]
                     
                 # Check if any norm is overestimated. 
                 ring = rel_src.ring
@@ -610,3 +616,6 @@ class Simulation:
         flag_log_beta_wit_2 = f'*' if self.max_log_beta_wit_2 + 1 > self.ring.log_beta_sis_2 else ' '                                   # NOTE: Underestimating security when log_beta_wit_2 is measured in Frobenius norm 
         flag_log_beta_ext_2 = f'*' if self.max_log_beta_ext_2 != None and self.max_log_beta_ext_2 + 1> self.ring.log_beta_sis_2 else ' '    # NOTE: Underestimating security when log_beta_ext_2 is measured in Frobenius norm 
         print(f'Maximum log ell_2-norm (real | extr) = ({ceil(self.max_log_beta_wit_2):3d}{flag_log_beta_wit_2}|{ceil(self.max_log_beta_ext_2):3d}{flag_log_beta_ext_2}), log SIS norm bound = {self.ring.log_beta_sis_2}')
+        for err in self.error_log:
+            print(f'{err}')
+        print(f' ')
