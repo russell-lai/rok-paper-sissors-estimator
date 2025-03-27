@@ -1,12 +1,23 @@
+# from dataclasses import *
+# from typing import List, Tuple
+# from sage.all import euler_phi, Expression, var, mod, ceil, floor, is_prime_power, sqrt, radical
+# from lattice_lib import *
+# from lattice_lib.util import *
+# import importlib
+# estimator = importlib.import_module("lattice-estimator.estimator")
+# import warnings
+# from itertools import chain
+
 from dataclasses import *
 from typing import List, Tuple
-from sage.all import euler_phi, Expression, var, mod, ceil, floor, is_prime_power, sqrt, radical
-from lattice_lib import *
-from lattice_lib.util import *
+from sage.all import euler_phi, Expression, var, mod, ceil, floor, is_prime_power, sqrt, radical, function, is_even, oo, log, ZZ, n
+from .lattice_lib import *
 import importlib
-estimator = importlib.import_module("lattice-estimator.estimator")
+estimator = importlib.import_module(".lattice-estimator.estimator", package="estimator")
 import warnings
 from itertools import chain
+import sys
+import os
 
 class HiddenPrints:
     def __enter__(self):
