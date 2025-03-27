@@ -18,6 +18,7 @@ import warnings
 from itertools import chain
 import sys
 import os
+from copy import deepcopy
 
 class HiddenPrints:
     def __enter__(self):
@@ -519,6 +520,7 @@ class Relation:
 class Simulation:
     ring_params: dict = field(repr=False) # ring parameters
     rel_params: dict = field(repr=False) # relation parameters 
+    RelationClass : type = Relation # relation class
     
     ring: RingParam = field(repr=False,init=False)      # ring parameters
     trace : List[Tuple[str, Relation]] = field(repr=False,init=False) # execution trace
@@ -530,7 +532,7 @@ class Simulation:
     
     def __post_init__(self):
         self.ring = RingParam(**self.ring_params)
-        rel = Relation(ring = self.ring, **self.rel_params)
+        rel = self.RelationClass(ring = self.ring, **self.rel_params)
         self.trace = [("init", rel)]
         self.max_log_beta_wit_2 = rel.log_beta_wit_2
         self.max_log_beta_wit_inf = rel.log_beta_wit_inf
