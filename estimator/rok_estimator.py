@@ -265,7 +265,7 @@ class Relation:
         return self.wdim * self.rep * self.ring.phi * ceil(self.log_beta_wit_inf + 1)
     
     def show(self,label=None,brief=False):
-        label_str = f'{label:8s}' if label else 'Relation'
+        label_str = f'{label:10s}' if label else 'Relation'
         flag_log_beta_wit_2 = f'*' if self.log_beta_wit_2 + 1 > self.ring.log_beta_sis_2 else ' '                                   # NOTE: Underestimating security when log_beta_wit_2 is measured in Frobenius norm 
         flag_log_beta_ext_2 = f'*' if self.log_beta_ext_2 != None and self.log_beta_ext_2 + 1> self.ring.log_beta_sis_2 else ' '    # NOTE: Underestimating security when log_beta_ext_2 is measured in Frobenius norm 
         if self.snd_err == 0:
@@ -601,7 +601,11 @@ class Simulation:
         
         total_comm = self.trace[-1][1].acc_comm
         total_snd_err = self.trace[-1][1].acc_snd_err
-        print(f'Total Cost: communication = {pretty_size(total_comm):8s}, soundness error = 2^{ceil(log(total_snd_err,2))}')
+        if total_snd_err == 0:
+            log_total_snd_err = -oo
+        else:
+            log_total_snd_err = ceil(log(total_snd_err,2))
+        print(f'Total Cost: communication = {pretty_size(total_comm):8s}, soundness error = 2^{log_total_snd_err}')
         flag_log_beta_wit_2 = f'*' if self.max_log_beta_wit_2 + 1 > self.ring.log_beta_sis_2 else ' '                                   # NOTE: Underestimating security when log_beta_wit_2 is measured in Frobenius norm 
         flag_log_beta_ext_2 = f'*' if self.max_log_beta_ext_2 != None and self.max_log_beta_ext_2 + 1> self.ring.log_beta_sis_2 else ' '    # NOTE: Underestimating security when log_beta_ext_2 is measured in Frobenius norm 
         print(f'Maximum log ell_2-norm (real | extr) = ({ceil(self.max_log_beta_wit_2):3d}{flag_log_beta_wit_2}|{ceil(self.max_log_beta_ext_2):3d}{flag_log_beta_ext_2}), log SIS norm bound = {self.ring.log_beta_sis_2}')
