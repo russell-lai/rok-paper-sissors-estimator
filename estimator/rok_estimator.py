@@ -76,6 +76,13 @@ def bound_coeff_inf_from_canon_2(beta_2):
 def bound_log_coeff_inf_from_log_canon_2(log_beta_2):
     return log_beta_2
 
+def get_log_snd_err_str(snd_err):
+    if snd_err == 0:
+        log_snd_err_str = "-oo"
+    else:
+        log_snd_err_str = f"{ceil(log(snd_err,2))}"
+    return log_snd_err_str
+
 @dataclass
 class SubtractiveSet:
     """
@@ -308,18 +315,12 @@ Parameters:
     def show_row(self):
         flag_log_beta_wit_2 = f'*' if self.log_beta_wit_2 + 1 > self.ring.log_beta_sis_2 else ' '                                   # NOTE: Underestimating security when log_beta_wit_2 is measured in Frobenius norm 
         flag_log_beta_ext_2 = f'*' if self.log_beta_ext_2 != None and self.log_beta_ext_2 + 1> self.ring.log_beta_sis_2 else ' '    # NOTE: Underestimating security when log_beta_ext_2 is measured in Frobenius norm 
-        if self.snd_err == 0:
-            log_snd_err = "-oo"
-        else:
-            log_snd_err = f'{ceil(log(self.snd_err,2))}'
-        if self.acc_snd_err == 0:
-            log_acc_snd_err = "-oo"
-        else:
-            log_acc_snd_err = f'{ceil(log(self.acc_snd_err,2))}'    
+        log_snd_err_str = get_log_snd_err_str(self.snd_err)
+        log_acc_snd_err_str = get_log_snd_err_str(self.acc_snd_err)
         if self.trivial:
-            print(f' {self.op_name:9s} |          |     |                           |                             |          |      ({pretty_size(self.comm):8s} | {pretty_size(self.acc_comm):8s})      |         (2^{log_snd_err:4s} | 2^{log_acc_snd_err:4s})         ')
+            print(f' {self.op_name:9s} |          |     |                           |                             |          |      ({pretty_size(self.comm):8s} | {pretty_size(self.acc_comm):8s})      |         (2^{log_snd_err_str:4s} | 2^{log_acc_snd_err_str:4s})         ')
         else:
-            print(f' {self.op_name:9s} | {self.wdim:8d} | {self.rep:3d} |        ({ceil(self.log_beta_wit_2):3d}{flag_log_beta_wit_2}|{ceil(self.log_beta_ext_2):3d}{flag_log_beta_ext_2})        |         ({ceil(self.log_beta_wit_inf):3d} |{ceil(self.log_beta_ext_inf):3d} )         | {pretty_size(self.wit_size()):8s} |      ({pretty_size(self.comm):8s} | {pretty_size(self.acc_comm):8s})      |         (2^{log_snd_err:4s} | 2^{log_acc_snd_err:4s})         ')
+            print(f' {self.op_name:9s} | {self.wdim:8d} | {self.rep:3d} |        ({ceil(self.log_beta_wit_2):3d}{flag_log_beta_wit_2}|{ceil(self.log_beta_ext_2):3d}{flag_log_beta_ext_2})        |         ({ceil(self.log_beta_wit_inf):3d} |{ceil(self.log_beta_ext_inf):3d} )         | {pretty_size(self.wit_size()):8s} |      ({pretty_size(self.comm):8s} | {pretty_size(self.acc_comm):8s})      |         (2^{log_snd_err_str:4s} | 2^{log_acc_snd_err_str:4s})         ')
               
     def show(self):
         self.show_header()
@@ -632,26 +633,26 @@ class Simulation:
                 if rel_src.log_beta_ext_inf > self.max_log_beta_ext_inf:
                     self.max_log_beta_ext_inf = rel_src.log_beta_ext_inf
     
-    def show_trace(self,brief=False):
+    def show_trace(self):
         print(f'Execution Trace:')
         self.trace[0].show_header()
         for rel in self.trace:
             rel.show_row()
         print(f' ')
         
-    def show(self,brief=False):        
+    def show(self):        
         self.show_trace()
         
         total_comm = self.trace[-1].acc_comm
         total_snd_err = self.trace[-1].acc_snd_err
-        if total_snd_err == 0:
-            log_total_snd_err = "-oo"
-        else:
-            log_total_snd_err = ceil(log(total_snd_err,2))
-        print(f'Total Cost: communication = {pretty_size(total_comm):8s}, soundness error = 2^{log_total_snd_err}')
+        log_total_snd_err_str = get_log_snd_err_str(total_snd_err)
+        print(f'Total Cost: communication = {pretty_size(total_comm):8s}, soundness error = 2^{log_total_snd_err_str}')
         flag_log_beta_wit_2 = f'*' if self.max_log_beta_wit_2 + 1 > self.ring.log_beta_sis_2 else ' '                                   # NOTE: Underestimating security when log_beta_wit_2 is measured in Frobenius norm 
         flag_log_beta_ext_2 = f'*' if self.max_log_beta_ext_2 != None and self.max_log_beta_ext_2 + 1> self.ring.log_beta_sis_2 else ' '    # NOTE: Underestimating security when log_beta_ext_2 is measured in Frobenius norm 
         print(f'Maximum log ell_2-norm (real | extr) = ({ceil(self.max_log_beta_wit_2):3d}{flag_log_beta_wit_2}|{ceil(self.max_log_beta_ext_2):3d}{flag_log_beta_ext_2}), log SIS norm bound = {self.ring.log_beta_sis_2}')
         for err in self.error_log:
             print(f'{err}')
         print(f' ')
+        
+
+        
