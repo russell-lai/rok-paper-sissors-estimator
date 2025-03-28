@@ -3,7 +3,7 @@ from typing import List, Tuple
 from sage.all import euler_phi, Expression, var, mod, ceil, floor, is_prime_power, sqrt, radical, function, is_even, oo, log, ZZ, n, pi
 from .lattice_lib.subtractive_set import max_prime_power_divisor
 import importlib
-estimator = importlib.import_module(".lattice-estimator.estimator", package="estimator")
+estimator = importlib.import_module(".lattice-estimator.estimator", package="rok_estimator")
 import warnings
 import sys
 import os

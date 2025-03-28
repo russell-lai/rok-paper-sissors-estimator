@@ -1,6 +1,6 @@
 [submodule "estimator/lattice_lib"]
-	path = estimator/lattice_lib
+	path = rok_estimator/lattice_lib
 	url = git@github.com:russell-lai/lattice_lib.git
 [submodule "estimator/lattice-estimator"]
-	path = estimator/lattice-estimator
+	path = rok_estimator/lattice-estimator
 	url = ../../malb/lattice-estimator.git
