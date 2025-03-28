@@ -541,8 +541,8 @@ Parameters:
             "acc_comm" : self.acc_comm + comm,
             "snd_err": snd_err,
             "acc_snd_err": self.acc_snd_err + snd_err,
-            "log_beta_ext_2_func" : lambda x : self.log_beta_wit_2, # perfect extraction # BUG: pi_norm only proves Frobenius norm but not max column ell_2-norm
-            "log_beta_ext_inf_func" : lambda x : bound_coeff_inf_from_canon_2(self.log_beta_wit_2), # extraction of ell_2-norm is perfect, then bound ell_inf-norm by norm conversion
+            "log_beta_ext_2_func" : lambda x : self.log_beta_wit_2 + log(sqrt(self.rep),2), # pi_norm only proves Frobenius norm but not max column ell_2-norm
+            "log_beta_ext_inf_func" : lambda x : bound_coeff_inf_from_canon_2(self.log_beta_wit_2 + log(sqrt(self.rep),2)), # extraction of Frobenius norm is perfect, then bound ell_inf-norm by norm conversion
         }
         return replace(self, **rel_params)
     
