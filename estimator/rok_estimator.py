@@ -1,7 +1,7 @@
 from dataclasses import *
 from typing import List, Tuple
-from sage.all import euler_phi, Expression, var, mod, ceil, floor, is_prime_power, sqrt, radical, function, is_even, oo, log, ZZ, n
-from .lattice_lib import *
+from sage.all import euler_phi, Expression, var, mod, ceil, floor, is_prime_power, sqrt, radical, function, is_even, oo, log, ZZ, n, pi
+from .lattice_lib.subtractive_set import max_prime_power_divisor
 import importlib
 estimator = importlib.import_module(".lattice-estimator.estimator", package="estimator")
 import warnings
@@ -11,6 +11,7 @@ from copy import deepcopy
 
 class HiddenPrints:
     def __enter__(self):
+        
         self._original_stdout = sys.stdout
         sys.stdout = open(os.devnull, "w")
 
