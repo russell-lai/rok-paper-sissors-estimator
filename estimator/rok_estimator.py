@@ -119,13 +119,13 @@ class SubtractiveSet:
             c_rad = (4/pi)**len(f.prime_divisors())
             return SubtractiveSet(cardinality = f/fmax, gamma_2 = 1, theta_2 = f/(4*sqrt(2)), gamma_inf = c_rad * phi, theta_inf = c_rad * phi)
         
-    def show(self):
-        print(f'Subtractive set parameters:')
-        print(f'    cardinality: {self.cardinality}')
-        print(f'    forward ell_2 expansion factor gamma_2: 2^{ceil(log(self.gamma_2,2))}')
-        print(f'    inverse ell_2 expansion factor theta_2: 2^{ceil(log(self.theta_2,2))}')
-        print(f'    forward ell_inf expansion factor gamma_inf: 2^{ceil(log(self.gamma_inf,2))}')
-        print(f'    inverse ell_inf expansion factor theta_inf: 2^{ceil(log(self.theta_inf,2))}')
+    def __repr__(self):
+        return f'''Subtractive set parameters:
+    cardinality: {self.cardinality}
+    forward ell_2 expansion factor gamma_2: 2^{ceil(log(self.gamma_2,2))}
+    inverse ell_2 expansion factor theta_2: 2^{ceil(log(self.theta_2,2))}
+    forward ell_inf expansion factor gamma_inf: 2^{ceil(log(self.gamma_inf,2))}
+    inverse ell_inf expansion factor theta_inf: 2^{ceil(log(self.theta_inf,2))}'''
 
 @dataclass
 class RingParam:
@@ -196,14 +196,14 @@ class RingParam:
     def size_Rq(self):
         return self.phi * self.log_q
     
-    def show(self):
-        print("Ring parameters:")
-        print(f"    conductor f: {self.f}, degree phi: {self.phi}, modulus q: 2^{self.log_q}, beta_sis_2: 2^{self.log_beta_sis_2}")
-        print(f"    SIS module rank n_sis: {self.n_sis}, target SIS security: {self.secpar_target}, resulting SIS security: {self.secpar_result}")
-        print(f"    residue degree: {self.residue_deg}, target Schwartz-Zippel security: {self.kappa_target}, resulting Schwartz-Zippel security: {self.kappa_result}")
-        print(f"    |R_q| = {pretty_size(self.size_Rq())}, |R_q^(n_sis)| = {pretty_size(self.size_Rq()*self.n_sis)}")
-        print(f' ')
-        self.C.show()
+    def __repr__(self):
+        return f'''Ring parameters:
+    conductor f: {self.f}, degree phi: {self.phi}, modulus q: 2^{self.log_q}, beta_sis_2: 2^{self.log_beta_sis_2}
+    SIS module rank n_sis: {self.n_sis}, target SIS security: {self.secpar_target}, resulting SIS security: {self.secpar_result}
+    residue degree: {self.residue_deg}, target Schwartz-Zippel security: {self.kappa_target}, resulting Schwartz-Zippel security: {self.kappa_result}
+    |R_q| = {pretty_size(self.size_Rq())}, |R_q^(n_sis)| = {pretty_size(self.size_Rq()*self.n_sis)}
+ 
+{self.C}'''
 
 @dataclass
 class Relation:
@@ -231,6 +231,7 @@ class Relation:
     """
     ring: RingParam = field(repr=False)             # ring parameters
     trivial : bool = False                          # True if the relation is the "True" relation
+    op_name: str = "init"                               # name of the RoK used to arrive at this relation
     n_compress: int | None = None                   # number of compressed relations, including both commitment and non-commitment relations
     n_commit: int | None = None                     # module rank of commitment, will be overwritten by self.ring.n_sis.
     n_rel: int = 0                                  # number of (non-commitment) relations  
@@ -264,40 +265,67 @@ class Relation:
     def wit_size(self):
         return self.wdim * self.rep * self.ring.phi * ceil(self.log_beta_wit_inf + 1)
     
-    def show(self,label=None,brief=False):
-        label_str = f'{label:10s}' if label else 'Relation'
+    def __repr__(self):
+        return f'''Relation:
+    H * F * W = Y
+Statement:
+    H: n_compress x (n_commit + n_rel)
+    F: (n_commit + n_rel) x wdim
+    Y: n_compress x rep
+Witness:
+    W: wdim x rep
+    ||sigma(W)||_2 <= 2^log_beta_wit_2 measured in max column canonical ell_2-norm
+    ||psi(W)||_inf <= 2^log_beta_wit_inf
+Parameters:
+    n_compress = {self.n_compress}, n_commit = {self.n_commit}, n_rel = {self.n_rel}
+    wdim = {self.wdim}, rep = {self.rep}
+    log_2-norm (real | extr) = ( {ceil(self.log_beta_wit_2)} | {ceil(self.log_beta_ext_2)} ), log_inf-norm (real | extr) = ( {ceil(self.log_beta_wit_inf)} | {ceil(self.log_beta_ext_inf)} )
+    wit size = {pretty_size(self.wit_size()):8s}
+ '''
+        # print(f'Relation:')
+        # print(f'    H * F * W = Y')
+        # print(f'Statement:')
+        # print(f'    H: n_compress x (n_commit + n_rel)')
+        # print(f'    F: (n_commit + n_rel) x wdim')
+        # print(f'    Y: n_compress x rep')
+        # print(f'Witness:')
+        # print(f'    W: wdim x rep')
+        # print(f'    ||sigma(W)||_2 <= 2^log_beta_wit_2 measured in max column canonical ell_2-norm')
+        # print(f'    ||psi(W)||_inf <= 2^log_beta_wit_inf')
+        # print(f'Parameters:')
+        # print(f'    n_compress = {self.n_compress}, n_commit = {self.n_commit}, n_rel = {self.n_rel}')
+        # print(f'    wdim = {self.wdim}, rep = {self.rep}')
+        # print(f'    log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2)} |{ceil(self.log_beta_ext_2)} ), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf)}|{ceil(self.log_beta_ext_inf)})')
+        # print(f'    wit size = {pretty_size(self.wit_size()):8s}')
+        # print(f' ')
+    
+
+            
+    def show_header(self):
+        print(f' operation |   wdim   | rep | log_2-norm  (real | extr) | log_inf-norm  (real | extr) | wit size | communication  (growth | total) | soundness error  (growth | total) ')    
+        print(f'======================================================================================================================================================================')    
+    
+    def show_row(self):
         flag_log_beta_wit_2 = f'*' if self.log_beta_wit_2 + 1 > self.ring.log_beta_sis_2 else ' '                                   # NOTE: Underestimating security when log_beta_wit_2 is measured in Frobenius norm 
         flag_log_beta_ext_2 = f'*' if self.log_beta_ext_2 != None and self.log_beta_ext_2 + 1> self.ring.log_beta_sis_2 else ' '    # NOTE: Underestimating security when log_beta_ext_2 is measured in Frobenius norm 
         if self.snd_err == 0:
-            log_snd_err = -oo
+            log_snd_err = "-oo"
         else:
-            log_snd_err = ceil(log(self.snd_err,2))
+            log_snd_err = f'{ceil(log(self.snd_err,2))}'
         if self.acc_snd_err == 0:
-            log_acc_snd_err = -oo
+            log_acc_snd_err = "-oo"
         else:
-            log_acc_snd_err = ceil(log(self.acc_snd_err,2))    
+            log_acc_snd_err = f'{ceil(log(self.acc_snd_err,2))}'    
         if self.trivial:
-            print(f'{label_str}: communication (growth | total) = ({pretty_size(self.comm):8s} | {pretty_size(self.acc_comm):8s}), soundness error (growth | total) = (2^{log_snd_err} | 2^{log_acc_snd_err})')
-        elif brief:
-            print(f'{label_str}: wdim = {self.wdim:8d}, rep = {self.rep:3d}, log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2):3d}{flag_log_beta_wit_2}|{ceil(self.log_beta_ext_2):3d}{flag_log_beta_ext_2}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf):3d} |{ceil(self.log_beta_ext_inf):3d} ), wit size = {pretty_size(self.wit_size()):8s}, communication (growth | total) = ({pretty_size(self.comm):8s} | {pretty_size(self.acc_comm):8s}), soundness error (growth | total) = (2^{log_snd_err} | 2^{log_acc_snd_err})')
+            print(f' {self.op_name:9s} |          |     |                           |                             |          |      ({pretty_size(self.comm):8s} | {pretty_size(self.acc_comm):8s})      |         (2^{log_snd_err:4s} | 2^{log_acc_snd_err:4s})         ')
         else:
-            print(f'Relation:')
-            print(f'    H * F * W = Y')
-            print(f'Statement:')
-            print(f'    H: n_compress x (n_commit + n_rel)')
-            print(f'    F: (n_commit + n_rel) x wdim')
-            print(f'    Y: n_compress x rep')
-            print(f'Witness:')
-            print(f'    W: wdim x rep')
-            print(f'    ||sigma(W)||_2 <= 2^log_beta_wit_2 measured in max column canonical ell_2-norm')
-            print(f'    ||psi(W)||_inf <= 2^log_beta_wit_inf')
-            print(f'Parameters:')
-            print(f'    n_compress = {self.n_compress}, n_commit = {self.n_commit}, n_rel = {self.n_rel}')
-            print(f'    wdim = {self.wdim}, rep = {self.rep}')
-            print(f'    log_2-norm (real | extr) = ({ceil(self.log_beta_wit_2)}{flag_log_beta_wit_2}|{ceil(self.log_beta_ext_2)}{flag_log_beta_ext_2}), log_inf-norm (real | extr) = ({ceil(self.log_beta_wit_inf)}|{ceil(self.log_beta_ext_inf)})')
-            print(f'    wit size = {pretty_size(self.wit_size()):8s}')
-            print(f' ')
-            
+            print(f' {self.op_name:9s} | {self.wdim:8d} | {self.rep:3d} |        ({ceil(self.log_beta_wit_2):3d}{flag_log_beta_wit_2}|{ceil(self.log_beta_ext_2):3d}{flag_log_beta_ext_2})        |         ({ceil(self.log_beta_wit_inf):3d} |{ceil(self.log_beta_ext_inf):3d} )         | {pretty_size(self.wit_size()):8s} |      ({pretty_size(self.comm):8s} | {pretty_size(self.acc_comm):8s})      |         (2^{log_snd_err:4s} | 2^{log_acc_snd_err:4s})         ')
+              
+    def show(self):
+        self.show_header()
+        self.show_row()
+        print(f" ")          
+                
     def execute(self, op, **kwargs):
         match op:
             case "noop":
@@ -337,6 +365,7 @@ class Relation:
         rel_param = {
             # "ring": self.ring,
             "trivial": True,
+            "op_name": "finish",
             # "n_compress": self.n_compress,
             # "n_commit": self.n_commit,
             # "n_rel": self.n_rel,
@@ -374,6 +403,7 @@ class Relation:
         rel_param = {
             # "ring": self.ring,
             # "trivial": self.trivial,
+            "op_name": "bdecomp",
             # "n_compress": self.n_compress,
             # "n_commit": self.n_commit,
             # "n_rel": self.n_rel,
@@ -403,6 +433,7 @@ class Relation:
         rel_params = {
             # "ring": self.ring,
             # "trivial": self.trivial,
+            "op_name": "split",
             # "n_compress": self.n_compress,
             # "n_commit": self.n_commit,
             # "n_rel": self.n_rel,
@@ -433,6 +464,7 @@ class Relation:
         rel_params = {
             # "ring": self.ring,
             # "trivial": self.trivial,
+            "op_name": "fold",
             # "n_compress": self.n_compress,
             # "n_commit": self.n_commit,
             # "n_rel": self.n_rel,
@@ -459,6 +491,7 @@ class Relation:
             rel_params = {
                 # "ring": self.ring,
                 # "trivial": self.trivial,
+                "op_name": "batch",
                 "n_compress": self.n_commit + 1, # TODO: Allow batching into more than 1 row to allow smaller field size.
                 # "n_commit": self.n_commit,
                 # "n_rel": self.n_rel,
@@ -471,7 +504,21 @@ class Relation:
             }
             return replace(self, **rel_params)
         else:
-            return deepcopy(self)
+            rel_params = {
+                # "ring": self.ring,
+                # "trivial": self.trivial,
+                "op_name": "batch",
+                # "n_compress": self.n_commit, 
+                # "n_commit": self.n_commit,
+                # "n_rel": self.n_rel,
+                # "wdim": self.wdim,
+                # "rep": self.rep,
+                # "log_beta_wit_2": self.log_beta_wit_2,
+                # "log_beta_wit_inf": self.log_beta_wit_inf
+                # "snd_err": snd_err,
+                # "acc_snd_err": self.acc_snd_err + snd_err,
+            }
+            return replace(self, **rel_params)
     
     def pi_norm(self):
         """
@@ -486,6 +533,7 @@ class Relation:
         rel_params = {
             # "ring": self.ring,
             # "trivial": self.trivial,
+            "op_name": "norm",
             "n_compress": self.n_compress + 3,
             # "n_commit": self.n_commit,
             "n_rel": self.n_rel + 3,
@@ -523,7 +571,7 @@ class Simulation:
     RelationClass : type = Relation # relation class
     
     ring: RingParam = field(repr=False,init=False)      # ring parameters
-    trace : List[Tuple[str, Relation]] = field(repr=False,init=False) # execution trace
+    trace : List[Tuple[Relation]] = field(repr=False,init=False) # execution trace
     max_log_beta_wit_2 : int = 0           # maximum log_beta_wit_2
     max_log_beta_wit_inf : int = 0         # maximum log_beta_wit_inf
     max_log_beta_ext_2 : int = 0           # maximum log_beta_ext_2
@@ -533,7 +581,7 @@ class Simulation:
     def __post_init__(self):
         self.ring = RingParam(**self.ring_params)
         rel = self.RelationClass(ring = self.ring, **self.rel_params)
-        self.trace = [("init", rel)]
+        self.trace = [rel]
         self.max_log_beta_wit_2 = rel.log_beta_wit_2
         self.max_log_beta_wit_inf = rel.log_beta_wit_inf
         self.error_log = []
@@ -544,8 +592,8 @@ class Simulation:
         """
         # Forward direction, a.k.a. "correctness direction"
         for op, params in ops:
-            new_rel = self.trace[-1][1].execute(op, **params)
-            self.trace += [(op, new_rel)]
+            new_rel = self.trace[-1].execute(op, **params)
+            self.trace += [new_rel]
             if new_rel.log_beta_wit_2 > self.max_log_beta_wit_2:
                 self.max_log_beta_wit_2 = new_rel.log_beta_wit_2
             if new_rel.log_beta_wit_inf > self.max_log_beta_wit_inf:
@@ -553,16 +601,16 @@ class Simulation:
             
     def extract(self):
         # Backward direction, a.k.a. "extraction direction"        
-        if self.trace[-1][0] == "finish":
+        if self.trace[-1].op_name == "finish":
             for i in range(len(self.trace)-1):
                 # The RoK is from `rel_src` to `rel_tgt`. The extracted norm function is stored in `rel_tgt`.
-                rel_tgt = self.trace[-i-1][1]
-                rel_src = self.trace[-i-2][1]
+                rel_tgt = self.trace[-i-1]
+                rel_src = self.trace[-i-2]
             
                 rel_src.log_beta_ext_2 = rel_tgt.log_beta_ext_2_func(rel_tgt.log_beta_ext_2)   
                 rel_src.log_beta_ext_inf = rel_tgt.log_beta_ext_inf_func(rel_tgt.log_beta_ext_inf) 
                 
-                if self.trace[-i-1][0] == "norm":
+                if self.trace[-i-1].op_name == "norm":
                     if rel_src.ring.log_q - 1 <= rel_src.log_beta_ext_inf * 2 + log(rel_src.ring.ring_exp_inf,2) + log(rel_src.wdim,2):
                         self.error_log += [f"Extraction failure for pi_norm: The norm of the square of the extracted witness is 2^{ceil(rel_src.log_beta_ext_inf * 2 + log(rel_src.ring.ring_exp_inf,2) + log(rel_src.wdim,2))} overflowing modulo q."]
                     
@@ -572,11 +620,11 @@ class Simulation:
                 rep = rel_src.rep
                 if rel_src.log_beta_ext_2 > bound_log_canon_2_from_log_coeff_inf(ring, rel_src.log_beta_ext_inf, dim=wdim * rep):
                     rel_src.log_beta_ext_2 = bound_log_canon_2_from_log_coeff_inf(ring, rel_src.log_beta_ext_inf, dim=wdim * rep)
-                    # print(f"{self.trace[-i-2][0]}: ell-2 norm is overestimated!")
+                    # print(f"{self.trace[-i-2].op_name}: ell-2 norm is overestimated!")
                     
                 if rel_src.log_beta_ext_inf > bound_log_coeff_inf_from_log_canon_2(rel_src.log_beta_ext_2):
                     rel_src.log_beta_ext_inf = bound_log_coeff_inf_from_log_canon_2(rel_src.log_beta_ext_2)
-                    # print(f"{self.trace[-i-2][0]}: ell-inf norm is overestimated!")
+                    # print(f"{self.trace[-i-2].op_name}: ell-inf norm is overestimated!")
                     
                 # Record maximum log_beta_ext_2 and log_beta_ext_inf
                 if rel_src.log_beta_ext_2 > self.max_log_beta_ext_2:
@@ -586,23 +634,18 @@ class Simulation:
     
     def show_trace(self,brief=False):
         print(f'Execution Trace:')
-        for op, rel in self.trace:
-            rel.show(label=op,brief=True)
+        self.trace[0].show_header()
+        for rel in self.trace:
+            rel.show_row()
         print(f' ')
         
-    def show(self,brief=False):
-        self.ring.show()
-        print(f' ')
+    def show(self,brief=False):        
+        self.show_trace()
         
-        self.trace[0][1].show(brief=brief)
-        
-        if not brief:
-            self.show_trace(brief=brief)
-        
-        total_comm = self.trace[-1][1].acc_comm
-        total_snd_err = self.trace[-1][1].acc_snd_err
+        total_comm = self.trace[-1].acc_comm
+        total_snd_err = self.trace[-1].acc_snd_err
         if total_snd_err == 0:
-            log_total_snd_err = -oo
+            log_total_snd_err = "-oo"
         else:
             log_total_snd_err = ceil(log(total_snd_err,2))
         print(f'Total Cost: communication = {pretty_size(total_comm):8s}, soundness error = 2^{log_total_snd_err}')
