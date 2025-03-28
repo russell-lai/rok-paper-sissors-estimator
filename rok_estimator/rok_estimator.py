@@ -436,6 +436,8 @@ Parameters:
             "acc_comm": self.acc_comm + comm,
             "snd_err": snd_err,
             "acc_snd_err": self.acc_snd_err + snd_err,
+            "log_beta_ext_2_func" : lambda x : x, 
+            "log_beta_ext_inf_func" : lambda x : x, 
         }        
         return replace(self, **rel_params)
     
@@ -492,6 +494,8 @@ Parameters:
                 # "log_beta_wit_inf": self.log_beta_wit_inf
                 "snd_err": snd_err,
                 "acc_snd_err": self.acc_snd_err + snd_err,
+                "log_beta_ext_2_func" : lambda x : x, 
+                "log_beta_ext_inf_func" : lambda x : x, 
             }
             return replace(self, **rel_params)
         else:
