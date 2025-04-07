@@ -54,14 +54,8 @@ def pretty_size(bits, units=UNITS_MAPPING):
     return str(amount) + suffix
 
 # The following bounds are from https://eprint.iacr.org/2024/1972.pdf Corollary 1.
-def bound_canon_2_from_coeff_inf(ring, beta_inf, dim = 1):
-    return sqrt(ring.fhat * ring.phi * dim) * beta_inf 
-
 def bound_log_canon_2_from_log_coeff_inf(ring, log_beta_inf, dim = 1):
     return log(sqrt(ring.fhat * ring.phi * dim), 2) + log_beta_inf 
-
-def bound_coeff_inf_from_canon_2(beta_2):
-    return beta_2
 
 def bound_log_coeff_inf_from_log_canon_2(log_beta_2):
     return log_beta_2
@@ -258,6 +252,7 @@ class Relation:
             self.log_beta_wit_2 = ceil(log(sqrt(self.wdim * self.ring.phi * self.ring.fhat) * 2**self.log_beta_wit_inf,2)) # Measured in max ell_2-norm over all columns
         if self.log_beta_wit_inf == None:
             self.log_beta_wit_inf = self.log_beta_wit_2 # If ell_inf-norm is not specified, trivially bound it by ell_2-norm 
+        self.norm_correction_wit()
         
     def wit_size(self):
         return self.wdim * self.rep * self.ring.phi * ceil(self.log_beta_wit_inf + 1)
@@ -296,7 +291,31 @@ Parameters:
         # print(f'    wit size = {pretty_size(self.wit_size()):8s}')
         # print(f' ')
     
-
+    def norm_correction_wit(self):
+        # log_beta_wit_fro_bound = bound_log_canon_2_from_log_coeff_inf(self.ring, self.log_beta_wit_inf, dim=self.wdim * self.rep) # bounding canonical Frobenius norm from coefficient ell-inf norm
+        log_beta_wit_2_bound = bound_log_canon_2_from_log_coeff_inf(self.ring, self.log_beta_wit_inf, dim=self.wdim) # bounding canonical ell-2 norm from coefficient ell-inf norm
+        log_beta_wit_inf_bound = bound_log_coeff_inf_from_log_canon_2(self.log_beta_wit_2) # bounding coefficient ell-inf norm from canonical ell-2 norm
+        
+        if self.log_beta_wit_2 > log_beta_wit_2_bound:
+            self.log_beta_wit_2 = log_beta_wit_2_bound
+            # print(f"{self.op_name}: ell-2 norm is overestimated during execution!")
+            
+        if self.log_beta_wit_inf > log_beta_wit_inf_bound:
+            self.log_beta_wit_inf = log_beta_wit_inf_bound
+            # print(f"{self.op_name}: ell-inf norm is overestimated during execution!")
+    
+    def norm_correction_ext(self):
+        # log_beta_ext_fro_bound = bound_log_canon_2_from_log_coeff_inf(self.ring, self.log_beta_ext_inf, dim=self.wdim * self.rep) # bounding canonical Frobenius norm from coefficient ell-inf norm
+        log_beta_ext_2_bound = bound_log_canon_2_from_log_coeff_inf(self.ring, self.log_beta_ext_inf, dim=self.wdim) # bounding canonical ell-2 norm from coefficient ell-inf norm
+        log_beta_ext_inf_bound = bound_log_coeff_inf_from_log_canon_2(self.log_beta_ext_2) # bounding coefficient ell-inf norm from canonical ell-2 norm
+        
+        if self.log_beta_ext_2 > log_beta_ext_2_bound:
+            self.log_beta_ext_2 = log_beta_ext_2_bound
+            # print(f"{self.op_name}: ell-2 norm is overestimated during extraction!")
+            
+        if self.log_beta_ext_inf > log_beta_ext_inf_bound:
+            self.log_beta_ext_inf = log_beta_ext_inf_bound
+            # print(f"{self.op_name}: ell-inf norm is overestimated during extraction!")
             
     def show_header(self):
         print(f' operation |   wdim   | rep | log_2-norm  (real | extr) | log_inf-norm  (real | extr) | wit size | communication  (growth | total) | soundness error  (growth | total) ')    
@@ -400,8 +419,7 @@ Parameters:
             # "n_rel": self.n_rel,
             # "wdim": self.wdim,
             "rep" : self.rep * ell,
-            # "log_beta_wit_2" : bound_log_canon_2_from_log_coeff_inf(self.ring, log(floor(base / 2),2), dim=self.wdim * self.rep * ell), # measured in Frobenius norm
-            "log_beta_wit_2" : bound_log_canon_2_from_log_coeff_inf(self.ring, log(floor(base / 2),2), dim=self.wdim), # measured in max ell_2-norm over all columns
+            "log_beta_wit_2" : oo, # the constructor of Relation will bound the ell-2 norm from the ell-inf norm
             "log_beta_wit_inf" : log(floor(base / 2),2),
             "comm": comm,
             "snd_err": 0,
@@ -430,7 +448,7 @@ Parameters:
             # "n_rel": self.n_rel,
             "wdim": ZZ(self.wdim / d),
             "rep": self.rep * d,
-            "log_beta_wit_2": min([self.log_beta_wit_2, bound_log_canon_2_from_log_coeff_inf(self.ring, self.log_beta_wit_inf, dim=ZZ(self.wdim / d))]),
+            # "log_beta_wit_2": self.log_beta_wit_2,
             # "log_beta_wit_inf": self.log_beta_wit_inf
             "comm": comm,
             "acc_comm": self.acc_comm + comm,
@@ -542,7 +560,7 @@ Parameters:
             "snd_err": snd_err,
             "acc_snd_err": self.acc_snd_err + snd_err,
             "log_beta_ext_2_func" : lambda x : self.log_beta_wit_2 + log(sqrt(self.rep),2), # pi_norm only proves Frobenius norm but not max column ell_2-norm
-            "log_beta_ext_inf_func" : lambda x : bound_coeff_inf_from_canon_2(self.log_beta_wit_2 + log(sqrt(self.rep),2)), # extraction of Frobenius norm is perfect, then bound ell_inf-norm by norm conversion
+            "log_beta_ext_inf_func" : lambda x : oo, # Simulation.extract will bound coefficient ell-inf norm by canonical ell-2 norm
         }
         return replace(self, **rel_params)
     
@@ -604,22 +622,13 @@ class Simulation:
             
                 rel_src.log_beta_ext_2 = rel_tgt.log_beta_ext_2_func(rel_tgt.log_beta_ext_2)   
                 rel_src.log_beta_ext_inf = rel_tgt.log_beta_ext_inf_func(rel_tgt.log_beta_ext_inf) 
+                    
+                # Check if any norm is overestimated. 
+                rel_src.norm_correction_ext()
                 
                 if self.trace[-i-1].op_name == "norm":
                     if rel_src.ring.log_q - 1 <= rel_src.log_beta_ext_inf * 2 + log(rel_src.ring.ring_exp_inf,2) + log(rel_src.wdim,2):
                         self.error_log += [f"Extraction failure for pi_norm: The norm of the square of the extracted witness is 2^{ceil(rel_src.log_beta_ext_inf * 2 + log(rel_src.ring.ring_exp_inf,2) + log(rel_src.wdim,2))} overflowing modulo q."]
-                    
-                # Check if any norm is overestimated. 
-                ring = rel_src.ring
-                wdim = rel_src.wdim
-                rep = rel_src.rep
-                if rel_src.log_beta_ext_2 > bound_log_canon_2_from_log_coeff_inf(ring, rel_src.log_beta_ext_inf, dim=wdim * rep):
-                    rel_src.log_beta_ext_2 = bound_log_canon_2_from_log_coeff_inf(ring, rel_src.log_beta_ext_inf, dim=wdim * rep)
-                    # print(f"{self.trace[-i-2].op_name}: ell-2 norm is overestimated!")
-                    
-                if rel_src.log_beta_ext_inf > bound_log_coeff_inf_from_log_canon_2(rel_src.log_beta_ext_2):
-                    rel_src.log_beta_ext_inf = bound_log_coeff_inf_from_log_canon_2(rel_src.log_beta_ext_2)
-                    # print(f"{self.trace[-i-2].op_name}: ell-inf norm is overestimated!")
                     
                 # Record maximum log_beta_ext_2 and log_beta_ext_inf
                 if rel_src.log_beta_ext_2 > self.max_log_beta_ext_2:
