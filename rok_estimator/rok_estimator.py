@@ -430,13 +430,13 @@ Parameters:
             # "n_rel": self.n_rel,
             "wdim": ZZ(self.wdim / d),
             "rep": self.rep * d,
-            # "log_beta_wit_2": self.log_beta_wit_2,
+            "log_beta_wit_2": min([self.log_beta_wit_2, bound_log_canon_2_from_log_coeff_inf(self.ring, self.log_beta_wit_inf, dim=ZZ(self.wdim / d))]),
             # "log_beta_wit_inf": self.log_beta_wit_inf
             "comm": comm,
             "acc_comm": self.acc_comm + comm,
             "snd_err": snd_err,
             "acc_snd_err": self.acc_snd_err + snd_err,
-            "log_beta_ext_2_func" : lambda x : x, 
+            "log_beta_ext_2_func" : lambda x : x + log(sqrt(d),2), 
             "log_beta_ext_inf_func" : lambda x : x, 
         }        
         return replace(self, **rel_params)
