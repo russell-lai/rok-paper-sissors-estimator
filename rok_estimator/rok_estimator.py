@@ -486,7 +486,7 @@ Parameters:
             "log_beta_wit_inf": log(repin * self.ring.C.gamma_inf,2) + self.log_beta_wit_inf, 
             "snd_err": snd_err,
             "acc_snd_err": self.acc_snd_err + snd_err,
-            "log_beta_ext_2_func" : lambda x : x + log(2 * sqrt(repin) * self.ring.C.theta_2,2),
+            "log_beta_ext_2_func" : lambda x : x + log(2 * self.ring.C.theta_2,2),
             "log_beta_ext_inf_func" : lambda x : x + log(2 * self.ring.C.theta_inf,2),
         }
         return replace(self, **rel_params)
